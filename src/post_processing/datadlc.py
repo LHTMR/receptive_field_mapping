@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import numpy as np
 import cv2
@@ -12,36 +15,36 @@ class DataDLC:
 
     # This is the initial class, reading the h5 file for DLC data, then
     # getting bending coefficient, homography, plotting, and saving the homography video
-    def __init__(self,
-                 h5_path: str) -> None:
-        Val.validate_type(h5_path, str, "H5 Path")
-        Val.validate_path(h5_path, file_types=[".h5"])
-
-        df = pd.read_hdf(h5_path)
+    def __init__(self, h5_file) -> None:
+        df = pd.read_hdf(h5_file)
+        # Making slots for future dataframes/attributes
+        self.df_square = None
+        self.df_monofil = None
+        self.df_likelihoods = None
         self.df_merged = None
+        self.df_bending_coefficients = None
+        self.df_transformed_monofil = None
 
-        try: # extract desired parts from h5 file
-            df.columns = \
-                [f"{bodypart}_{coord}" for bodypart, coord in zip(
+        try:  # Extract desired parts from the h5 file
+            df.columns = [
+                f"{bodypart}_{coord}" for bodypart, coord in zip(
                     df.columns.get_level_values(1),
                     df.columns.get_level_values(2)
-                    )]
+                )
+            ]
 
-            self.df_monofil = \
-                df.loc[:, df.columns.str.startswith(('FR', 'FG', 'FB')) & \
-                    ~df.columns.str.endswith('likelihood')]
+            self.df_monofil = df.loc[:, df.columns.str.startswith(('FR', 'FG', 'FB')) &
+                                     ~df.columns.str.endswith('likelihood')]
 
-            self.df_square = \
-                df.loc[:, df.columns.str.startswith(
-                    ('Top_left', 'Top_right', 'Bottom_left', 'Bottom_right')
-                    ) & ~df.columns.str.endswith('likelihood')]
+            self.df_square = df.loc[:, df.columns.str.startswith(
+                ('Top_left', 'Top_right', 'Bottom_left', 'Bottom_right')) &
+                ~df.columns.str.endswith('likelihood')]
 
-            self.df_likelihoods = \
-                df.loc[:, df.columns.str.endswith('likelihood')]
+            self.df_likelihoods = df.loc[:, df.columns.str.endswith('likelihood')]
         except AttributeError as e:
             raise AttributeError(
                 f"Invalid h5 file. Please check the file format.\n{e}"
-                )
+            )
 
     def get_likelihoods(self) -> str:
 

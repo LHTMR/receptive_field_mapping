@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import numpy as np
 import json
@@ -51,14 +54,29 @@ class OutlierImputer:
         self.log_file = log_file
 
     @staticmethod
-    def detect_outliers_velocity(df: pd.DataFrame,
+    def transform_to_derivative(df: pd.DataFrame) -> pd.DataFrame:
+        Val.validate_type(df, pd.DataFrame, "DataFrame")
+        # Ensure the DataFrame has an even number of columns (x and y pairs)
+        if df.shape[1] % 2 != 0:
+            raise ValueError("The DataFrame must have an even number of columns (x and y pairs).")
+
+        # Calculate the derivative (difference between consecutive rows)
+        derivative_df = df.diff().abs()  # Use `.diff()` and drop the first row (NaN)
+        derivative_df.iloc[0, :] = 0  # Set the first row to zero to avoid NaNs
+
+        # Rename columns to indicate they are derivatives
+        derivative_df.columns = [f"{col}_derivative" for col in df.columns]
+
+        return derivative_df
+
+    def detect_outliers_velocity(self,
+                                 df: pd.DataFrame,
                                  threshold: int|float = 2.0) -> pd.DataFrame:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
         Val.validate_type(threshold, (int, float), "Threshold")
         Val.validate_positive(threshold, "Threshold")
-        
-        df_velocity = df.diff().abs()
-        df_velocity.iloc[0, :] = 0  # Avoid NaNs in the first row
+
+        df_velocity = self.transform_to_derivative(df.copy())
 
         mean, std = df_velocity.mean(), df_velocity.std()
         outlier_mask = (df_velocity < (mean - threshold * std)) |\

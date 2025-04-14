@@ -1,0 +1,10 @@
+{
+    "Top_left_x": "KNeighborsRegressor(n_neighbors=15)",
+    "Top_left_y": "SVR(C=1, epsilon=0.2, gamma=0.1)",
+    "Top_right_x": "SVR(C=100, epsilon=0.2, gamma=0.1)",
+    "Top_right_y": "KNeighborsRegressor()",
+    "Bottom_left_x": "SVR(C=10, epsilon=0.2)",
+    "Bottom_left_y": "SVR(C=10, epsilon=0.01)",
+    "Bottom_right_x": "SVR(C=1, gamma=0.1)",
+    "Bottom_right_y": "KNeighborsRegressor(n_neighbors=15)"
+}
