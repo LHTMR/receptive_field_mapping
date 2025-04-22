@@ -1,20 +1,21 @@
+from src.post_processing.validation import Validation as Val
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import BayesianRidge
+from sklearn.svm import SVR
+from xgboost import XGBRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
+import json
+import numpy as np
+import pandas as pd
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import pandas as pd
-import numpy as np
-import json
-from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
-from sklearn.neighbors import KNeighborsRegressor
-from xgboost import XGBRegressor
-from sklearn.svm import SVR
-from sklearn.linear_model import BayesianRidge
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.model_selection import GridSearchCV
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
-from validation import Validation as Val
+
 
 class OutlierImputer:
     models = {
@@ -49,7 +50,7 @@ class OutlierImputer:
                  log_file="model_performance.json") -> None:
         Val.validate_type(log_file, str, "Log File")
         Val.validate_path(log_file, file_types=[".json"])
-        
+
         self.best_models = {}
         self.log_file = log_file
 
@@ -58,20 +59,18 @@ class OutlierImputer:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
         # Ensure the DataFrame has an even number of columns (x and y pairs)
         if df.shape[1] % 2 != 0:
-            raise ValueError("The DataFrame must have an even number of columns (x and y pairs).")
+            raise ValueError(
+                "The DataFrame must have an even number of columns (x and y pairs).")
 
         # Calculate the derivative (difference between consecutive rows)
         derivative_df = df.diff().abs()  # Use `.diff()` and drop the first row (NaN)
         derivative_df.iloc[0, :] = 0  # Set the first row to zero to avoid NaNs
 
-        # Rename columns to indicate they are derivatives
-        derivative_df.columns = [f"{col}_derivative" for col in df.columns]
-
         return derivative_df
 
     def detect_outliers_velocity(self,
                                  df: pd.DataFrame,
-                                 threshold: int|float = 2.0) -> pd.DataFrame:
+                                 threshold: int | float = 2.0) -> pd.DataFrame:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
         Val.validate_type(threshold, (int, float), "Threshold")
         Val.validate_positive(threshold, "Threshold")
@@ -99,7 +98,7 @@ class OutlierImputer:
             train_df = train_df.dropna(how="any")
             if train_df.empty:
                 continue
-            
+
             X_train = train_df.drop(columns=[target_col])
             y_train = train_df[target_col]
             best_model, best_score = None, float("inf")
@@ -133,13 +132,13 @@ class OutlierImputer:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
         Val.validate_type(max_iter, int, "Max Iterations")
         Val.validate_positive(max_iter, "Max Iterations")
-        
+
         df_copy = df.copy()
         self._select_best_models_per_col(df_copy)
 
         estimators = [model for model in self.best_models.values() if model]
         estimator = estimators[0] if estimators else RandomForestRegressor()
-        
+
         imputer = IterativeImputer(estimator=estimator,
                                    max_iter=max_iter,
                                    random_state=101)
@@ -152,7 +151,7 @@ class OutlierImputer:
 
     def impute_outliers(self,
                         df: pd.DataFrame,
-                        std_threshold: int|float = 2.0) -> pd.DataFrame:
+                        std_threshold: int | float = 2.0) -> pd.DataFrame:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
         Val.validate_type(std_threshold, (int, float), "STD Threshold")
         Val.validate_positive(std_threshold, "STD Threshold")
@@ -161,6 +160,7 @@ class OutlierImputer:
         df_copy = self.iterative_imputation(df_copy)
 
         with open(self.log_file, "w") as f:
-            json.dump({col: str(model) for col, model in self.best_models.items()}, f, indent=4)
+            json.dump({col: str(model)
+                      for col, model in self.best_models.items()}, f, indent=4)
 
         return df_copy

@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import numpy as np
-from validation import Validation as Val
+from src.post_processing.validation import Validation as Val
 
 class DataNeuron:
     def __init__(self,
@@ -15,6 +15,7 @@ class DataNeuron:
 
         self.df = pd.read_excel(xclc_path)
         self.original_freq = original_freq
+        self.downsampled_df = None
 
         # Define required columns with "OR" groups
         required_columns = [
