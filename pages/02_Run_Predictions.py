@@ -209,7 +209,7 @@ with tab1:
     def main():
         st.title("DeepLabCut Video Prediction")
         ### Change when moving
-        project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
+        project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
         config_path = os.path.join(project_path, "config.yaml")
         videos_dir = os.path.join(project_path, "videos")
         # Save them globally
