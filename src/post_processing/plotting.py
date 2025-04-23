@@ -1,6 +1,6 @@
 import tempfile
 import imageio.v2 as imageio  # newer version
-from validation import Validation as Val
+from src.post_processing.validation import Validation as Val
 from src.post_processing.mergeddata import MergedData
 import cv2
 from sklearn.preprocessing import MinMaxScaler
@@ -386,8 +386,12 @@ class Plotting:
 
             # Add a small text box for size correlation
             text_box = f"Circle Size ∝ {size_col}"
-            ax.text(0.02, 0.98, text_box, transform=ax.transAxes, fontsize=10,
-                    verticalalignment='top', bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
+            ax.text(0.02, 0.98,
+                    text_box,
+                    transform=ax.transAxes,
+                    fontsize=10,
+                    verticalalignment='top',
+                    bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
 
         # Set axis limits and labels
         ax.set_xlim(Plotting._get_lim(homography_points))
