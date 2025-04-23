@@ -29,10 +29,12 @@ class PlottingPlotly(Plotting):
                          color_1: str = "#1f77b4",  # blue
                          color_2: str = "#d62728"   # red
                          ) -> go.Figure:
+        # Validate inputs
         Val.validate_dataframe(df, required_columns=columns, name="DataFrame")
-        Val.validate_type(df, pd.DataFrame, "DataFrame")
-        Val.validate_strings(xlabel=xlabel, ylabel_1=ylabel_1,
-                             ylabel_2=ylabel_2, title=title)
+        Val.validate_type(columns, list, "Columns")
+        Val.validate_type_in_list(columns, str, "Columns")
+        Val.validate_strings(xlabel=xlabel, ylabel_1=ylabel_1, ylabel_2=ylabel_2,
+                             title=title, color_1=color_1, color_2=color_2)
 
         try:
             fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -82,6 +84,16 @@ class PlottingPlotly(Plotting):
                                   y_label: str = "y (mm)",
                                   color: str = "#d62728",
                                   figsize: tuple[int] = (12, 12)) -> bytes:
+        # Validate inputs
+        Val.validate_array(homography_points, shape=(4, 2),
+                           name="Homography Points")
+        Val.validate_dataframe(df_transformed_monofil,
+                               name="Transformed Monofilament Data")
+        Val.validate_positive(fps, "FPS", zero_allowed=False)
+        Val.validate_strings(title=title, x_label=x_label,
+                             y_label=y_label, color=color)
+        Val.validate_type(figsize, tuple, "Figure Size")
+
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_xlim(Plotting._get_lim(homography_points))
         ax.set_ylim(Plotting._get_lim(homography_points))
@@ -122,10 +134,13 @@ class PlottingPlotly(Plotting):
                                     color="royalblue",
                                     x_label="x (mm)",
                                     y_label="y (mm)") -> go.Figure:
-        # Validate
+        # Validate inputs
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
-        Val.validate_type(df_transformed_monofil, pd.DataFrame, "DataFrame")
+        Val.validate_dataframe(df_transformed_monofil,
+                               name="Transformed Monofilament Data")
+        Val.validate_strings(title=title, color=color,
+                             x_label=x_label, y_label=y_label)
 
         # Create frames
         frames = []
@@ -165,15 +180,28 @@ class PlottingPlotly(Plotting):
                 xanchor='right',
                 yanchor='top',
                 buttons=[
-                    dict(label='Play', method='animate', args=[
-                         None, {"frame": {"duration": 100, "redraw": True}, "fromcurrent": True}]),
-                    dict(label='Pause', method='animate', args=[[None], {
-                         "frame": {"duration": 0}, "mode": "immediate", "transition": {"duration": 0}}])
+                    dict(label='Play',
+                         method='animate',
+                         args=[None,
+                               {"frame": {"duration": 100,
+                                          "redraw": True},
+                                "fromcurrent": True}]),
+                    dict(label='Pause',
+                         method='animate',
+                         args=[[None],
+                               {"frame": {"duration": 0},
+                                "mode": "immediate",
+                                "transition":{"duration": 0}
+                         }])
                 ]
             )],
             sliders=[dict(
-                steps=[dict(method='animate', args=[[str(i)], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}], label=str(i))
-                       for i in range(len(frames))],
+                steps=[dict(
+                    method='animate',
+                    args=[[str(i)],
+                          {"frame": {"duration": 0, "redraw": True},
+                              "mode": "immediate"}
+                          ], label=str(i)) for i in range(len(frames))],
                 transition=dict(duration=0),
                 x=0, y=0,
                 currentvalue=dict(prefix="Frame: ", visible=True),
@@ -220,16 +248,16 @@ class PlottingPlotly(Plotting):
                                  fps: int = 30,
                                  figsize: tuple[int] = (12, 12),
                                  cmap: str = "viridis") -> bytes:
+        # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
-        Val.validate_strings(x_col=x_col, y_col=y_col, size_col=size_col,
-                             color_col=color_col, title=title, xlabel=xlabel,
-                             ylabel=ylabel, cmap=cmap)
+        Val.validate_strings(x_col=x_col, y_col=y_col, size_col=size_col, color_col=color_col,
+                             title=title, xlabel=xlabel, ylabel=ylabel, cmap=cmap)
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
         Val.validate_type(bending, bool, "Bending")
         Val.validate_type(spikes, bool, "Spikes")
-        Val.validate_type(fps, int, "FPS")
-        Val.validate_positive(fps, "FPS")
+        Val.validate_positive(fps, "FPS", zero_allowed=False)
+        Val.validate_type(figsize, tuple, "Figure Size")
 
         df = merged_data.threshold_data(bending, spikes)
 
@@ -331,12 +359,12 @@ class PlottingPlotly(Plotting):
                          title: str = 'KDE Plot',
                          xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
                          cmap: str = "Viridis"):
-
+        # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
-        Val.validate_array(homography_points, shape=(4, 2),
-                           name="Homography Points")
         Val.validate_strings(x_col=x_col, y_col=y_col,
                              xlabel=xlabel, ylabel=ylabel, title=title, cmap=cmap)
+        Val.validate_array(homography_points, shape=(4, 2),
+                           name="Homography Points")
         Val.validate_type(bending, bool, "Bending")
         Val.validate_type(spikes, bool, "Spikes")
 
@@ -412,14 +440,12 @@ class PlottingPlotly(Plotting):
                      title: str = 'Scatter Plot',
                      xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
                      cmap: str = 'Viridis'):
-
+        # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
+        Val.validate_strings(x_col=x_col, y_col=y_col, size_col=size_col, color_col=color_col,
+                             xlabel=xlabel, ylabel=ylabel, title=title, cmap=cmap)
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
-        Val.validate_strings(x_col=x_col, y_col=y_col,
-                             size_col=size_col, color_col=color_col,
-                             xlabel=xlabel, ylabel=ylabel,
-                             title=title, cmap=cmap)
         Val.validate_type(bending, bool, "Bending")
         Val.validate_type(spikes, bool, "Spikes")
 
@@ -497,12 +523,11 @@ class PlottingPlotly(Plotting):
                                    title: str = "Scrolling Plot",
                                    color_1: str = "#1f77b4",
                                    color_2: str = "#d62728") -> bytes:
+        # Validate inputs
         Val.validate_type(merged_data, MergedData, "Merged Data")
         Val.validate_type_in_list(columns, str, "Columns")
         Val.validate_path(video_path, file_types=[".mp4", ".avi"])
-        Val.validate_type(title, str, "Title")
-        Val.validate_type(color_1, str, "Color 1")
-        Val.validate_type(color_2, str, "Color 2")
+        Val.validate_strings(title=title, color_1=color_1, color_2=color_2)
 
         df_merged = merged_data.df_merged.copy()
 
