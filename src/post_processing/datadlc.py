@@ -4,15 +4,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import numpy as np
 import cv2
-from outlierimputer import OutlierImputer
-from validation import Validation as Val
+from src.post_processing.outlierimputer import OutlierImputer
+from src.post_processing.validation import Validation as Val
 
 class DataDLC:
-    homography_points = np.array([[0, 20],
-                                  [20, 20],
-                                  [20, 0],
-                                  [0, 0]], dtype=np.float32)
-
     # This is the initial class, reading the h5 file for DLC data, then
     # getting bending coefficient, homography, plotting, and saving the homography video
     def __init__(self, h5_file) -> None:
@@ -24,6 +19,8 @@ class DataDLC:
         self.df_merged = None
         self.df_bending_coefficients = None
         self.df_transformed_monofil = None
+        self.homography_points = None
+        self.assign_homography_points()
 
         try:  # Extract desired parts from the h5 file
             df.columns = [
@@ -68,6 +65,7 @@ class DataDLC:
         if square:
             self.df_square = outlier_imputer.impute_outliers(self.df_square,
                                                              std_threshold)
+            return self.df_square
         if filament:
             self.df_monofil = outlier_imputer.impute_outliers(self.df_monofil,
                                                               std_threshold)
@@ -99,6 +97,19 @@ class DataDLC:
         self.df_bending_coefficients = pd.Series(bending_coefficients,
                                                  name='Bending_Coefficient')
         return self.df_bending_coefficients
+
+    def assign_homography_points(self,
+                                 start: int = 0,
+                                 end: int = 20) -> pd.DataFrame:
+        Val.validate_type(start, int, "Start")
+        Val.validate_type(end, int, "End")
+        Val.validate_positive(start, "Start", zero_allowed=True)
+        Val.validate_positive(end, "End", zero_allowed=True)
+        self.homography_points = np.array([[start, end],
+                                           [end, end],
+                                           [end, start],
+                                           [start, start]], dtype=np.float32)
+        return self.homography_points
 
     def apply_homography(self) -> pd.DataFrame:
 
@@ -136,8 +147,9 @@ class DataDLC:
 
     def _get_homography_matrix(self,
                                index: int,
-                               dst_points: np.ndarray=homography_points) -> np.ndarray:
-
+                               dst_points: np.ndarray = None) -> np.ndarray:
+        if dst_points is None:
+            dst_points = self.homography_points
         Val.validate_type(index, int, "Index")
         Val.validate_positive(index, "Index", zero_allowed=True)
         Val.validate_array_int_float(dst_points,

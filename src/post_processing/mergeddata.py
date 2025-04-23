@@ -1,11 +1,12 @@
+from scipy.signal import correlate
+from src.post_processing.validation import Validation as Val
+import pandas as pd
+from src.post_processing.dataneuron import DataNeuron
+from src.post_processing.datadlc import DataDLC
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from datadlc import DataDLC
-from dataneuron import DataNeuron
-import pandas as pd
-from validation import Validation as Val
-from scipy.signal import correlate
+
 
 class MergedData:
     def __init__(self,
@@ -33,11 +34,11 @@ class MergedData:
         # Merge the DataFrames
         df_dlc = self.dlc._merge_data()
         df_neuron = self.neuron.downsampled_df.copy()
-        
+
         # Create binary threshold columns
-        df_dlc['Bending_Binary'] = (df_dlc['Bending_Coefficient'] > \
-            self.threshold * df_dlc['Bending_Coefficient'].max()).astype(int)
-        
+        df_dlc['Bending_Binary'] = (df_dlc['Bending_Coefficient'] >
+                                    self.threshold * df_dlc['Bending_Coefficient'].max()).astype(int)
+
         # Fill gaps in neuron Spikes column with dynamic width
         df_neuron['Spikes_Filled'] = df_neuron['Spikes'].copy()
         gap_start = None
@@ -48,21 +49,22 @@ class MergedData:
                 gap_start = i + 1
             elif df_neuron['Spikes'][i] == 0 and gap_start is None:
                 gap_start = i
-        
+
         # Perform sequence alignment using cross-correlation
-        correlation = correlate(df_dlc['Bending_Binary'], df_neuron['Spikes_Filled'], mode='full')
+        correlation = correlate(
+            df_dlc['Bending_Binary'], df_neuron['Spikes_Filled'], mode='full')
         best_shift = correlation.argmax() - (len(df_neuron) - 1)
-        
+
         # Shift df_neuron index accordingly
         df_neuron = df_neuron.shift(periods=best_shift).reset_index(drop=True)
         # Merge the DataFrames
         self.df_merged = pd.concat([df_dlc, df_neuron], axis=1)
-        
+
         # After merging, fill the gaps created from shifting
         # Always zero-fill for Spikes and Spikes_Filled
         self.df_merged[['Spikes', 'Spikes_Filled']] = \
             self.df_merged[['Spikes', 'Spikes_Filled']].fillna(0).astype(int)
-        
+
         # Fill IFF column based on shift direction
         if best_shift < 0:
             self.df_merged["IFF"].fillna(method='ffill', inplace=True)
@@ -79,7 +81,7 @@ class MergedData:
         """
         # Use the Bending_Binary column instead of recalculating the threshold
         self.df_merged_cleaned = self.df_merged[
-            (self.df_merged['Bending_Binary'] == 1) | \
+            (self.df_merged['Bending_Binary'] == 1) |
             (self.df_merged['Spikes'] != 0)]
 
     def threshold_data(self,
@@ -96,7 +98,8 @@ class MergedData:
             return self.df_merged
 
         # Build the filter condition based on the boolean inputs
-        condition = pd.Series([False] * len(self.df_merged), index=self.df_merged.index)
+        condition = pd.Series([False] * len(self.df_merged),
+                              index=self.df_merged.index)
         if bending:
             condition |= (self.df_merged['Bending_Binary'] == 1)
         if spikes:
@@ -113,15 +116,15 @@ class MergedData:
         - Low bending coefficient with neuron firing
         """
         high_bend_w_neuron = self.df_merged[
-            (self.df_merged['Bending_Binary'] == 1) & \
+            (self.df_merged['Bending_Binary'] == 1) &
             (self.df_merged['Spikes'] >= 1)]
         high_bend_wo_neuron = self.df_merged[
-            (self.df_merged['Bending_Binary'] == 1) & \
+            (self.df_merged['Bending_Binary'] == 1) &
             (self.df_merged['Spikes'] == 0)]
         low_bend_w_neuron = self.df_merged[
-            (self.df_merged['Bending_Binary'] == 0) & \
+            (self.df_merged['Bending_Binary'] == 0) &
             (self.df_merged['Spikes'] >= 1)]
-        
+
         return high_bend_w_neuron, high_bend_wo_neuron, low_bend_w_neuron
 
     def _save_data(self,
