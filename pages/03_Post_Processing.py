@@ -110,36 +110,41 @@ tab1, tab2, tab3 = st.tabs(
 
 # Tab for processing labeled DLC data
 with tab1:
-    st.header("Upload Files")
+    st.header("Manage File")
 
-    # File uploader for DLC data
-    dlc_file = st.file_uploader(
-        "Upload DLC Data H5 file that was predicted from the video", type=["h5"])
-    # Initialize data_dlc in session state if not already present
-    if "data_dlc" not in st.session_state:
-        st.session_state.data_dlc = None
+    if "h5_path" in st.session_state:
+        st.session_state.data_dlc = DataDLC(st.session_state.h5_path)
+        st.success("DLC data processed successfully!")
 
-    if dlc_file is not None:
-        st.success(f"Uploaded DLC file: {dlc_file.name}")
+    else:
+        # File uploader for DLC data
+        dlc_file = st.file_uploader(
+            "Upload DLC Data H5 file that was predicted from the video", type=["h5"])
+        # Initialize data_dlc in session state if not already present
+        if "data_dlc" not in st.session_state:
+            st.session_state.data_dlc = None
 
-        # Save the uploaded file to a temporary location
-        with NamedTemporaryFile(delete=False, suffix=".h5") as temp_file:
-            temp_file.write(dlc_file.read())
-            temp_file_path = temp_file.name
+        if dlc_file is not None:
+            st.success(f"Uploaded DLC file: {dlc_file.name}")
 
-        # Read the HDF5 file using pandas
-        try:
-            df = pd.read_hdf(temp_file_path)
-            # Show df header
-            st.write(df)
+            # Save the uploaded file to a temporary location
+            with NamedTemporaryFile(delete=False, suffix=".h5") as temp_file:
+                temp_file.write(dlc_file.read())
+                temp_file_path = temp_file.name
+
+            # Read the HDF5 file using pandas
             try:
-                # Process the DLC data and store it in session state
-                st.session_state.data_dlc = DataDLC(temp_file_path)
-                st.success("DLC data processed successfully!")
+                df = pd.read_hdf(temp_file_path)
+                # Show df header
+                st.write(df)
+                try:
+                    # Process the DLC data and store it in session state
+                    st.session_state.data_dlc = DataDLC(temp_file_path)
+                    st.success("DLC data processed successfully!")
+                except Exception as e:
+                    st.error(f"Error processing DLC data: {e}")
             except Exception as e:
-                st.error(f"Error processing DLC data: {e}")
-        except Exception as e:
-            st.error(f"Error reading HDF5 file: {e}")
+                st.error(f"Error reading HDF5 file: {e}")
 
     st.header("Processing")
     # Use the stored data_dlc object for further processing
