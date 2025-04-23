@@ -269,12 +269,14 @@ with tab1:
                         if not h5_files:
                             st.error("No .h5 file found in videos directory.")
                         else:
-                            st.session_state["data_dlc"] = h5_files[0]
+                            h5_path = h5_files[0]  # Get the path as a string
+                            st.session_state["h5_path"] = h5_path
                             st.session_state["labeled_video_path"] = labeled_video_path
-                            st.success(f"Labels saved and ready: {st.session_state['data_dlc']}")
+                            st.success(f"Labels saved and ready: {h5_path}")
 
                     except Exception as e:
-                        st.error(f"Failed to set .h5 file in session state: {e}")
+                        st.error(f"Failed to set .h5 path in session state: {e}")
+
 
 with tab2:
     if "config_path" in st.session_state and "processed_video_path" in st.session_state:
