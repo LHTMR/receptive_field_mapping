@@ -16,6 +16,8 @@ import subprocess
 import sys
 import yaml
 import shutil
+import time
+from pathlib import Path
 
 ## TODO!
 ### Clear video_sets in config.yaml before each run. DONE!
@@ -119,10 +121,27 @@ def run_labeling(config_path, processed_video_path):
         )
         st.success("🖼️ Frames extracted!")
 
-        st.info("🚀 Launching labeling workflow (Napari)...")
-        # Try open Napari in Streamlit environment using subprocess
-        subprocess.Popen([sys.executable, "-c", f"import deeplabcut; deeplabcut.label_frames(r'{config_path}')"])
-        st.warning("📝 Label your frames, be sure to save layers and close Napari before clicking the next button!")
+        # find your first frame folder
+        project_path      = Path(config_path).parent
+        labeled_data_dir  = project_path / "labeled-data"
+        frame_folders     = list(labeled_data_dir.glob("*"))
+        if not frame_folders:
+            st.error("❌ No frame folders found in labeled-data.")
+            return
+        image_folder = frame_folders[0]
+
+        st.info("🚀 Launching Napari labeling…")
+        # build the path to your script
+        root_dir     = Path(__file__).parent.parent  # pages/ → receptive_field_mapping_app/
+        script_path  = root_dir / "src" / "components" / "napari_labeling.py"
+
+        # Command to run the napari script with config_path and image_folder as arguments
+        cmd = [
+            sys.executable, str(script_path), str(config_path), str(image_folder)
+        ]
+        subprocess.Popen(cmd, cwd=str(root_dir))
+
+        st.warning("📝 Napari is running—label your frames, then close Napari when you’re done.")
 
     except Exception as e:
         st.error(f"❌ Frame extraction or labeling failed: {e}")
@@ -253,7 +272,8 @@ with tab1:
         st.session_state["project_initialized"] = False
 
     # Setup paths
-    project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
+    #project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
+    project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
     config_path = os.path.join(project_path, "config.yaml")
     videos_dir = os.path.join(project_path, "videos")
 
@@ -306,9 +326,9 @@ with tab1:
                 if not h5_files:
                     st.error("No .h5 file found in videos directory.")
                 else:
-                    st.session_state["data_dlc"] = h5_files[0]
+                    st.session_state["h5_path"] = h5_files[0]
                     st.session_state["labels_saved"] = True
-                    st.success(f"✅ Labels saved: {st.session_state['data_dlc']}")
+                    st.success(f"✅ Labels saved: {st.session_state['h5_path']}")
     
                     # Add redirect button
                     if st.button("➡️ Go to Post Processing"):
