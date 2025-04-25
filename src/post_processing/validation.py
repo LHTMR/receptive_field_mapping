@@ -104,5 +104,4 @@ class Validation:
             if missing_columns and not optional:
                 raise ValueError(
                     f"{name} is missing required columns matching any of: {missing_columns}")
-
         return column_mapping

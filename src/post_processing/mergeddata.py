@@ -36,9 +36,10 @@ class MergedData:
         df_dlc = self.dlc._merge_data()
         df_neuron = self.neuron.downsampled_df.copy()
 
-        # Create binary threshold columns
-        df_dlc['Bending_Binary'] = (df_dlc['Bending_Coefficient'] >
-                                    self.threshold * df_dlc['Bending_Coefficient'].max()).astype(int)
+        # Calculate z-scores
+        df_dlc['Bending_ZScore'] = zscore(df_dlc['Bending_Coefficient'])
+        # Identify spikes based on a z-score threshold
+        df_dlc['Bending_Binary'] = (df_dlc['Bending_ZScore'] > self.threshold).astype(int)
 
         # Fill gaps in neuron Spikes column with dynamic width
         df_neuron['Spikes_Filled'] = df_neuron['Spikes'].copy()

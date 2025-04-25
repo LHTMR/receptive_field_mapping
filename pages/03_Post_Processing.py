@@ -9,6 +9,7 @@ from src.post_processing.outlierimputer import OutlierImputer
 from src.post_processing.datadlc import DataDLC
 import streamlit as st
 
+#! schedule a presentation practice? ask Magnus if needed
 
 def get_plot_inputs(default_title="",
                     default_x="index",
@@ -99,6 +100,17 @@ def get_temp_video_path(video_file, session_key="labeled_video_path"):
 
     return st.session_state[session_key]
 
+def assign_video_path(key="get_video_key"):
+    # Optional input for video path, just mark as success if it's already in session state
+    if "labeled_video_path" in st.session_state:
+        st.success("Labeled video path already in session state!")
+    else:
+        video_file = st.file_uploader(
+            "Upload Labeled Video File", type=["mp4", "avi"], key=key)
+        if video_file is not None:
+            st.session_state["labeled_video_path"] = get_temp_video_path(
+                video_file, session_key="labeled_video_path")
+            st.success("Labeled video path assigned successfully!")
 
 st.title("Post Processing")
 st.write("This page is for post processing the prediction results together with recorded neuron data.")
@@ -393,10 +405,10 @@ with tab2:
     # Fetch inputs for original frequency and then target frequency of video fps
     col1, col2 = st.columns(2)
     with col1:
-        original_fps = st.number_input("Enter the original frequency (hz) of the neuron data:",
+        original_fps = st.number_input("Enter the original sample rate of the neuron data:",
                                        value=None, min_value=1, step=1)
     with col2:
-        target_fps = st.number_input("Enter the target frequency (fps) of labeled data:",
+        target_fps = st.number_input("Enter the target sample rate of labeled data:",
                                      value=None, min_value=1, step=1)
 
     # Button to begin processing shows after file uploaded and inputs given
@@ -500,7 +512,7 @@ with tab3:
     if st.session_state.data_dlc is not None and st.session_state.neuron_data is not None:
         # get threshold for bending coefficient
         threshold = st.number_input("Threshold for Bending Coefficient",
-                                    value=0.1, min_value=0.0, step=0.01)
+                                    value=0.8, min_value=0.0, step=0.01)
 
         # Button to process merged data
         if st.button("Process Merged Data"):
@@ -721,12 +733,9 @@ with tab3:
                 inputs if they're not restated.
                 """)
             # get video file to get frame for background
-            video_file = st.file_uploader("Upload the original video file", type=[
-                "mp4", "avi"], key="kde_scatter_frame")
+            assign_video_path(key="kde_scatter_video_key")
 
-            if video_file is not None:
-                temp_video_path = get_temp_video_path(video_file)
-                st.success(f"Uploaded video file: {video_file.name}")
+            if "labeled_video_path" in st.session_state:
 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -761,7 +770,7 @@ with tab3:
                             cmap=matplotlib_cmap,
                             figsize=figsize,
                             frame=True,
-                            video_path=temp_video_path,
+                            video_path=st.session_state.labeled_video_path,
                             index=index_frame
                         )
                         st.pyplot(fig, use_container_width=True)
@@ -783,7 +792,7 @@ with tab3:
                             cmap=matplotlib_cmap,
                             figsize=figsize,
                             frame=True,
-                            video_path=temp_video_path,
+                            video_path=st.session_state.labeled_video_path,
                             index=index_frame
                         )
                         st.pyplot(fig, use_container_width=True)
@@ -799,20 +808,16 @@ with tab3:
             if it is one of the target columns.
             """)
         with st.expander("Scrolling Video Inputs", expanded=False):
-            st.markdown("#### Upload Video for Scrolling Overlay")
-            video_file = st.file_uploader("Upload the original video file", type=[
-                "mp4", "avi"], key="scroll_video")
+            assign_video_path(key="scrolling_video_key")
 
-            if video_file is not None:
-                temp_video_path = get_temp_video_path(video_file)
-                st.success(f"Uploaded video file: {video_file.name}")
+            if "labeled_video_path" in st.session_state:
 
                 # Choose columns
                 available_columns = st.session_state.merged_data.df_merged.columns.tolist()
                 scroll_columns = st.multiselect(
                     "Select two columns for the scrolling plot",
                     available_columns,
-                    default=["Bending_Coefficient", "Spikes"]
+                    default=["Bending_ZScore", "Spikes"]
                 )
 
                 if len(scroll_columns) != 2:
@@ -839,7 +844,7 @@ with tab3:
                             video_bytes = PlottingPlotly.generate_scroll_over_video(
                                 merged_data=st.session_state.merged_data,
                                 columns=scroll_columns,
-                                video_path=temp_video_path,
+                                video_path=st.session_state.labeled_video_path,
                                 color_1=color_1,
                                 color_2=color_2,
                                 title=title

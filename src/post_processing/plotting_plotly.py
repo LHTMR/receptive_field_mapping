@@ -18,6 +18,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+#! Make futurewarnings and runtimewarnings quiet for now
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 class PlottingPlotly(Plotting):
     @staticmethod
@@ -87,8 +91,8 @@ class PlottingPlotly(Plotting):
         # Validate inputs
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
-        Val.validate_dataframe(df_transformed_monofil,
-                               name="Transformed Monofilament Data")
+        Val.validate_type(df_transformed_monofil, pd.DataFrame,
+                           "Transformed Monofilament Data")
         Val.validate_positive(fps, "FPS", zero_allowed=False)
         Val.validate_strings(title=title, x_label=x_label,
                              y_label=y_label, color=color)
@@ -137,8 +141,8 @@ class PlottingPlotly(Plotting):
         # Validate inputs
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
-        Val.validate_dataframe(df_transformed_monofil,
-                               name="Transformed Monofilament Data")
+        Val.validate_type(df_transformed_monofil, pd.DataFrame,
+                           "Transformed Monofilament Data")
         Val.validate_strings(title=title, color=color,
                              x_label=x_label, y_label=y_label)
 
@@ -392,13 +396,6 @@ class PlottingPlotly(Plotting):
             opacity=0.7
         ))
 
-        # Optional overlay points
-        fig.add_trace(go.Scatter(
-            x=x, y=y, mode='markers',
-            marker=dict(size=2, color='rgba(0,0,0,0.2)'),
-            name='Points'
-        ))
-
         # Homography outline
         hp = np.vstack([homography_points, homography_points[0]])  # Close loop
         fig.add_trace(go.Scatter(
@@ -584,8 +581,8 @@ class PlottingPlotly(Plotting):
                 ax.xaxis.set_visible(False)
 
                 # Add threshold line if needed
-                if col == "Bending_Coefficient":
-                    y = merged_data.threshold * df_merged[col].max()
+                if col == "Bending_ZScore":
+                    y = merged_data.threshold
                     ax.axhline(y=y, color='grey', linestyle='--')
                     threshold_line = Line2D(
                         [0], [0], color='grey', linestyle='--', label='Threshold')

@@ -1,13 +1,9 @@
-import tempfile
-import imageio.v2 as imageio  # newer version
 from src.post_processing.validation import Validation as Val
 from src.post_processing.mergeddata import MergedData
 import cv2
 from sklearn.preprocessing import MinMaxScaler
 from matplotlib.lines import Line2D
 from matplotlib.animation import FuncAnimation
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -216,8 +212,12 @@ class Plotting:
 
                 # Add a small text box for size explanation
                 text_box = f"Circle Size ∝ {size_col}"
-                ax.text(0.02, 0.98, text_box, transform=ax.transAxes, fontsize=10,
-                        verticalalignment='top', bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
+                ax.text(0.02, 0.98,
+                        text_box,
+                        transform=ax.transAxes,
+                        fontsize=12,
+                        verticalalignment='top',
+                        bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
 
             plt.show()
             anim.save(filepath, fps=fps, extra_args=['-vcodec', 'libx264'])
@@ -389,7 +389,7 @@ class Plotting:
             ax.text(0.02, 0.98,
                     text_box,
                     transform=ax.transAxes,
-                    fontsize=10,
+                    fontsize=12,
                     verticalalignment='top',
                     bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
 
@@ -455,8 +455,9 @@ class Plotting:
             end_idx = min(len(df_merged), start_idx + window_size)
             data_window = df_merged.iloc[start_idx:end_idx]
 
+            # Adjust x-limits for scrolling effect
             if end_idx == len(df_merged):
-                end_xlim = frame_idx + 50
+                end_xlim = frame_idx + 50 # + window_size // 2
             else:
                 end_xlim = end_idx
             if start_idx == 0:
@@ -465,6 +466,7 @@ class Plotting:
             else:
                 start_xlim = start_idx
 
+            # Plot each column in the scrolling plot
             for i, col in enumerate(columns):
                 ax = ax_scroll[i]
                 ax.clear()
@@ -476,8 +478,8 @@ class Plotting:
                 ax.set_ylabel(col, color=f'C{i}')
                 ax.axvline(min(start_idx, start_xlim) + window_size //
                            2, color='black', linestyle='--')
-                if col == "Bending_Coefficient":
-                    y = merged_data.threshold * df_merged[col].max()
+                if col == "Bending_ZScore":
+                    y = merged_data.threshold
                     ax.axhline(y=y, color='grey', linestyle='--')
                 ax.xaxis.set_visible(False)  # Hide x-axis numbers
 
