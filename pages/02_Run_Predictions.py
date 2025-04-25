@@ -14,26 +14,71 @@ import deeplabcut
 import streamlit as st
 import subprocess
 import sys
+import yaml
+import shutil
 
 ## TODO!
-### Clear video_sets in config.yaml before each run
-### Make sure labeled_data and videos folder are cleared before each run
-#### Create init function to remove above
+### Clear video_sets in config.yaml before each run. DONE!
+### Make sure labeled_data and videos folder are cleared before each run. DONE!
+#### Create init function to remove above. DONE!
 ### Change path written to config depending on Windows/Linux?
-### Create new tab for retraining, containing guide for Napari! (also make config and video paths global) DONE
-### Make the final h5-file into a global variable in ST. DONE
-### Change buttons workflow. DONE
-### Remove unnecessary methods. predict, create label etc.
+### Create new tab for retraining, containing guide for Napari! (also make config and video paths global) DONE!
+### Make the final h5-file into a global variable in ST. DONE!
+### Change buttons workflow. DONE!
+### Remove unnecessary methods. predict, create label etc. DONE!
 
-import deeplabcut
-import subprocess
-import pathlib
-import sys
-import streamlit as st
-from ruamel.yaml import YAML
-from ruamel.yaml.scalarstring import DoubleQuotedScalarString
+tab1, tab2 = st.tabs(["Create Labeled Video", "Labeling / Retraining"])
 
-tab1, tab2 = st.tabs(["Main App", "Labeling / Retraining"])
+def init_project(config_path, project_path):
+    try:
+        yaml = YAML()
+        yaml.preserve_quotes = True
+
+        # 1. Load and clear video_sets in config.yaml
+        with open(config_path, 'r') as f:
+            cfg = yaml.load(f)
+
+        cfg['video_sets'] = {}
+
+        with open(config_path, 'w') as f:
+            yaml.dump(cfg, f)
+
+        # 2. Clean out 'videos' and 'labeled-data' folders
+        folders_to_clean = ['videos', 'labeled-data']
+        for folder in folders_to_clean:
+            full_path = os.path.join(project_path, folder)
+            if os.path.exists(full_path):
+                for file in os.listdir(full_path):
+                    file_path = os.path.join(full_path, file)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+
+        st.success("✅ Project initialized: config cleared, videos and labeled-data cleaned.")
+
+    except Exception as e:
+        st.error(f"❌ Failed to initialize project: {e}")
+
+def update_numframes2pick(config_path, selected_value):
+    try:
+        yaml = YAML()
+        yaml.preserve_quotes = True
+
+        with open(config_path, 'r') as f:
+            cfg = yaml.load(f)
+
+        current_value = cfg.get('numframes2pick', 5)
+        if current_value != selected_value:
+            cfg['numframes2pick'] = selected_value
+            with open(config_path, 'w') as f:
+                yaml.dump(cfg, f)
+            st.success(f"✅ Updated 'numframes2pick' from {current_value} to {selected_value}")
+        else:
+            st.info("ℹ️ 'numframes2pick' already set to the selected value. No update needed.")
+    except Exception as e:
+        st.error(f"❌ Failed to check/update config.yaml: {e}")
+        raise
 
 def add_video_to_config(config_path, processed_video_path):
     try:
@@ -60,7 +105,6 @@ def add_video_to_config(config_path, processed_video_path):
         st.error(f"❌ Error updating config.yaml: {e}")
         raise
 
-
 def run_labeling(config_path, processed_video_path):
     try:
         add_video_to_config(config_path, processed_video_path)
@@ -78,11 +122,10 @@ def run_labeling(config_path, processed_video_path):
         st.info("🚀 Launching labeling workflow (Napari)...")
         # Try open Napari in Streamlit environment using subprocess
         subprocess.Popen([sys.executable, "-c", f"import deeplabcut; deeplabcut.label_frames(r'{config_path}')"])
-        st.warning("📝 Label 5 frames and close Napari before clicking the next button!")
+        st.warning("📝 Label your frames, be sure to save layers and close Napari before clicking the next button!")
 
     except Exception as e:
         st.error(f"❌ Frame extraction or labeling failed: {e}")
-
 
 def run_retraining(config_path, processed_video_path):
     try:
@@ -175,11 +218,6 @@ def remove_previous_predictions(video_path):
     else:
         st.warning("No labeled video found to remove.")
 
-
-def run_prediction(video_path, config_path):
-    """Runs DeepLabCut prediction on the video."""
-    deeplabcut.analyze_videos(config_path, [video_path])
-
 def create_labeled_video(config_path, video_path):
     # Print the video path for debugging
     print(f"Creating labeled video for: {video_path}")
@@ -206,97 +244,111 @@ def create_labeled_video(config_path, video_path):
 
 
 with tab1:
-    def main():
-        st.title("DeepLabCut Video Prediction")
-        ### Change when moving
-        project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
-        config_path = os.path.join(project_path, "config.yaml")
-        videos_dir = os.path.join(project_path, "videos")
-        # Save them globally
-        st.session_state["project_path"] = project_path
-        st.session_state["config_path"] = config_path
-        st.session_state["videos_dir"] = videos_dir
+    st.title("DeepLabCut Video Prediction")
 
-        #os.makedirs(results_dir, exist_ok=True)
+    # Init session state flags
+    if "labels_saved" not in st.session_state:
+        st.session_state["labels_saved"] = False
+    if "project_initialized" not in st.session_state:
+        st.session_state["project_initialized"] = False
+
+    # Setup paths
+    project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
+    config_path = os.path.join(project_path, "config.yaml")
+    videos_dir = os.path.join(project_path, "videos")
+
+    # Save to session state
+    st.session_state["project_path"] = project_path
+    st.session_state["config_path"] = config_path
+    st.session_state["videos_dir"] = videos_dir
+
+    # Init project, clear directories and config file once starting anew
+    if not st.session_state["project_initialized"]:
+        init_project(config_path=config_path, project_path=project_path)
         os.makedirs(videos_dir, exist_ok=True)
+        st.session_state["project_initialized"] = True
 
-        uploaded_video = st.file_uploader("Upload a video for prediction", type=["mp4", "avi", "mov"])
+    # Upload and preprocess
+    uploaded_video = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
+    if uploaded_video is not None and "processed_video_path" not in st.session_state:
+        temp_input_path = os.path.join(videos_dir, uploaded_video.name)
+        with open(temp_input_path, "wb") as f:
+            f.write(uploaded_video.read())
 
-        if uploaded_video is not None:
-            temp_input_path = os.path.join(videos_dir, uploaded_video.name)
+        processed_video_name = "processed_" + uploaded_video.name
+        processed_video_path = os.path.join(videos_dir, processed_video_name)
 
-            # Save the uploaded file temporarily
-            with open(temp_input_path, "wb") as f:
-                f.write(uploaded_video.read())
+        st.write("Preprocessing video...")
+        preprocess_video(temp_input_path, processed_video_path)
+        os.remove(temp_input_path)
+        st.success("✅ Video preprocessed and saved.")
+        st.session_state["processed_video_path"] = processed_video_path
 
-            processed_video_name = "processed_" + uploaded_video.name
-            processed_video_path = os.path.join(videos_dir, processed_video_name)
+    # Prediction button
+    if "processed_video_path" in st.session_state and "labeled_video_path" not in st.session_state:
+        if st.button("Run Prediction and Create Labeled Video"):
+            st.write("Running DeepLabCut...")
+            deeplabcut.analyze_videos(config_path, [st.session_state["processed_video_path"]])
+            labeled_video_path = create_labeled_video(config_path, st.session_state["processed_video_path"])
 
-            st.write("Preprocessing video...")
-            preprocess_video(temp_input_path, processed_video_path)
-            os.remove(temp_input_path)  # Clean up the uploaded original
-            st.success("Video preprocessed and saved in videos/")
-            st.session_state["processed_video_path"] = processed_video_path
-            if st.button("Run Prediction and create labeled Video"):
-                st.write("Running DeepLabCut Prediction...")
-                run_prediction(processed_video_path, config_path)
-                labeled_video_path = create_labeled_video(config_path, processed_video_path)
+            if labeled_video_path and os.path.exists(labeled_video_path):
+                st.session_state["labeled_video_path"] = labeled_video_path
+                st.success("✅ Labeled video created!")
 
-                if labeled_video_path and os.path.exists(labeled_video_path):
-                    st.success("Labeled Video Created!")
+    # Show labeled video and Save Labels button
+    if "labeled_video_path" in st.session_state and os.path.exists(st.session_state["labeled_video_path"]):
+        st.video(convert_to_streamlit_friendly(st.session_state["labeled_video_path"]))
+        st.markdown("### ✅ Happy with the result? Save labels:")
 
-                    # Convert for Streamlit compatibility
-                    st.write("Converting video for display...")
-                    display_path = convert_to_streamlit_friendly(labeled_video_path)
-
-                    if display_path and os.path.exists(display_path):
-                        st.video(display_path)
-                    else:
-                        st.error("Failed to convert video for display.")
-
-
+        if st.button("💾 Save Labels") and not st.session_state["labels_saved"]:
+            try:
+                h5_files = glob.glob(os.path.join(videos_dir, "*.h5"))
+                if not h5_files:
+                    st.error("No .h5 file found in videos directory.")
                 else:
-                    st.error("Labeled video could not be found.")
-                st.markdown("---")
-                st.markdown("### ✅ If you are happy with the results, press the Save labels button and continue to the Post processing page:")
-                st.markdown("If you are not satisfied with the video, scroll up and press the Labeling / Retrain tab")
+                    st.session_state["data_dlc"] = h5_files[0]
+                    st.session_state["labels_saved"] = True
+                    st.success(f"✅ Labels saved: {st.session_state['data_dlc']}")
+    
+                    # Add redirect button
+                    if st.button("➡️ Go to Post Processing"):
+                        st.switch_page("pages/03_Post_Processing.py")
+                    st.stop()
+            except Exception as e:
+                st.error(f"Error saving labels: {e}")
 
-                if st.button("💾 Save Labels"):
-                    try:
-                        # Find the only .h5 file in the videos directory
-                        h5_files = glob(os.path.join(videos_dir, "*.h5"))
+    # Show success message after saving
+    if st.session_state["labels_saved"]:
+        st.success("✅ Labels already saved. Move to the Post Processing page.")
 
-                        if not h5_files:
-                            st.error("No .h5 file found in videos directory.")
-                        else:
-                            h5_path = h5_files[0]  # Get the path as a string
-                            st.session_state["h5_path"] = h5_path
-                            st.session_state["labeled_video_path"] = labeled_video_path
-                            st.success(f"Labels saved and ready: {h5_path}")
-
-                    except Exception as e:
-                        st.error(f"Failed to set .h5 path in session state: {e}")
 
 
 with tab2:
     if "config_path" in st.session_state and "processed_video_path" in st.session_state:
         config_path = st.session_state["config_path"]
         processed_video_path = st.session_state["processed_video_path"]
-        
-        # Print paths for debugging 
-        st.write(f"Using config: {config_path}")
-        st.write(f"Using video: {processed_video_path}")
-        
-        # Call your retraining or other functions here
+
+        st.markdown("## 🖼️ Extract Frames for Labeling")
+
+        # 👇 Frame count selector
+        num_frames = st.slider(
+            "Number of frames to extract:",
+            min_value=5,
+            max_value=50,
+            step=5,
+            value=5
+        )
+
+        # 👇 Button to trigger full pipeline
+        if st.button("1️⃣ Extract frames & launch labeling"):
+            update_numframes2pick(config_path, num_frames)
+            run_labeling(config_path, processed_video_path)
+
+        st.markdown("---")
+
+        # 🧠 Continue to retraining
+        if st.button("2️⃣ Done labeling? Continue to retrain"):
+            run_retraining(config_path, processed_video_path)
+
     else:
-        st.warning("Please upload a video first in Tab 1.")
-
-    if st.button("1️⃣ Extract frames & launch labeling"):
-        # Add input from user on number of frames to pick?
-        run_labeling(config_path, processed_video_path)
-
-    if st.button("2️⃣ Done labeling? Continue to retrain"):
-        run_retraining(config_path, processed_video_path)
-
-if __name__ == "__main__":
-     main()
+        st.warning("⚠️ Please upload and process a video in Tab 1 first.")
