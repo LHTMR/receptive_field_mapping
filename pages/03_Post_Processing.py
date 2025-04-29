@@ -409,7 +409,7 @@ with tab2:
                                        value=None, min_value=1, step=1)
     with col2:
         target_fps = st.number_input("Enter the target sample rate of labeled data:",
-                                     value=None, min_value=1, step=1)
+                                     value=30, min_value=1, step=1)
 
     # Button to begin processing shows after file uploaded and inputs given
     st.session_state.neuron_data = None
@@ -665,13 +665,13 @@ with tab3:
             non-zero for the neuron spikes.
             """)
         with st.expander("Plot KDE / Scatter", expanded=False):
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
 
             with col1:
-                bending = st.checkbox("Threshold on bending",
+                bending = st.checkbox("Bending threshold",
                                       value=True,
                                       key="kde_scatter_bending")
-                spikes = st.checkbox("Threshold on spikes",
+                spikes = st.checkbox("Spikes threshold",
                                      value=True,
                                      key="kde_scatter_spikes")
                 selected_cmap = st.selectbox("Colormap", sorted(
@@ -693,6 +693,22 @@ with tab3:
                 color_col = st.selectbox(
                     "Color Column", columns, index=35, key="kde_scatter_color")
 
+            with col4:
+                st.write("Inputs for interactive KDE Plot only:")
+                bw_bending = st.number_input(
+                    "Bandwidth for Bending", value=0.1, min_value=0.01,
+                    step=0.01, key="kde_scatter_bw_bending")
+                bw_spikes = st.number_input(
+                    "Bandwidth for Spikes", value=0.1, min_value=0.01,
+                    step=0.01, key="kde_scatter_bw_spikes")
+                cmap_spikes = st.selectbox(
+                    "Colormap for Spikes",
+                    sorted(plotly_cmaps.keys()),
+                    index=1, key="kde_scatter_cmap_spikes")
+                bw_threshold = st.number_input(
+                    "Percentage threshold for Bandwidth", value=0.05, min_value=0.01,
+                    step=0.05, key="kde_scatter_bw_threshold")
+
             if st.checkbox("Show KDE Density (interactive)"):
                 try:
                     fig_kde = PlottingPlotly.plot_kde_density(
@@ -703,7 +719,9 @@ with tab3:
                         bending=bending, spikes=spikes,
                         title=title,
                         xlabel=x_label, ylabel=y_label,
-                        cmap=selected_cmap
+                        cmap_bending=selected_cmap, cmap_spikes=cmap_spikes,
+                        bw_bending=bw_bending, bw_spikes=bw_spikes,
+                        threshold_percentage=bw_threshold,
                     )
                     st.plotly_chart(fig_kde, use_container_width=True)
                 except Exception as e:

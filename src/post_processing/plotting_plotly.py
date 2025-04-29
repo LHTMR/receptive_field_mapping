@@ -355,48 +355,126 @@ class PlottingPlotly(Plotting):
             return f.read()
 
     @staticmethod
+    def _compute_kde(df: pd.DataFrame,
+                     x_col: str, y_col: str,
+                     grid_limits: tuple,
+                     bw_method: float = 0.2):
+        """
+        Helper method to compute KDE for a given DataFrame.
+        
+        Args:
+            df (pd.DataFrame): DataFrame containing the data.
+            x_col (str): Column name for x-axis data.
+            y_col (str): Column name for y-axis data.
+            grid_limits (tuple): Tuple containing (xmin, xmax, ymin, ymax) for the grid.
+            bw_method (float): Bandwidth method for KDE.
+
+        Returns:
+            xx, yy, zz: Grid and KDE density values.
+        """
+        xmin, xmax, ymin, ymax = grid_limits
+        xx, yy = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
+        positions = np.vstack([xx.ravel(), yy.ravel()])
+        values = np.vstack([df[x_col].values, df[y_col].values])
+        kernel = gaussian_kde(values, bw_method=bw_method)
+        zz = np.reshape(kernel(positions).T, xx.shape)
+        return xx, yy, zz
+
+    @staticmethod
     def plot_kde_density(merged_data: MergedData,
-                         x_col: str, y_col: str,
-                         homography_points: np.ndarray,
-                         bending: bool = False,
-                         spikes: bool = False,
-                         title: str = 'KDE Plot',
-                         xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
-                         cmap: str = "Viridis"):
+                        x_col: str, y_col: str,
+                        homography_points: np.ndarray,
+                        bending: bool = False,
+                        spikes: bool = False,
+                        bw_bending: float = 0.2,
+                        bw_spikes: float = 0.2,
+                        title: str = 'KDE Plot',
+                        xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
+                        cmap_bending: str = "Viridis",
+                        cmap_spikes: str = "Reds",
+                        threshold_percentage: float = 0.05):
+        """
+        Plots KDE density for bending and spikes on the same plot.
+
+        Args:
+            merged_data (MergedData): Merged data object.
+            x_col (str): Column name for x-axis data.
+            y_col (str): Column name for y-axis data.
+            homography_points (np.ndarray): Homography points for grid limits.
+            bending (bool): Whether to include bending data.
+            spikes (bool): Whether to include spikes data.
+            title (str): Plot title.
+            xlabel (str): X-axis label.
+            ylabel (str): Y-axis label.
+            cmap (str): Colormap for the KDE plots.
+            threshold_percentage (float): Percentage of the maximum density to use as a threshold.
+
+        Returns:
+            go.Figure: Plotly figure object.
+        """
         # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
         Val.validate_strings(x_col=x_col, y_col=y_col,
-                             xlabel=xlabel, ylabel=ylabel, title=title, cmap=cmap)
+                            xlabel=xlabel, ylabel=ylabel, title=title,
+                            cmap_bending=cmap_bending, cmap_spikes=cmap_spikes)
         Val.validate_array(homography_points, shape=(4, 2),
-                           name="Homography Points")
+                        name="Homography Points")
         Val.validate_type(bending, bool, "Bending")
         Val.validate_type(spikes, bool, "Spikes")
 
-        df = merged_data.threshold_data(bending, spikes)
-        x = df[x_col].values
-        y = df[y_col].values
-
-        # KDE 2D grid
+        # KDE 2D grid limits
         xmin, xmax = Plotting._get_lim(homography_points)
         ymin, ymax = Plotting._get_lim(homography_points)
+        grid_limits = (xmin, xmax, ymin, ymax)
 
-        xx, yy = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
-        positions = np.vstack([xx.ravel(), yy.ravel()])
-        values = np.vstack([x, y])
-        kernel = gaussian_kde(values, bw_method=0.2)
-        zz = np.reshape(kernel(positions).T, xx.shape)
+        # Determine opacity based on conditions
+        opacity = 0.5 if bending and spikes else 1.0
 
         fig = go.Figure()
 
-        # Density heatmap (transposed because numpy axes are rows first)
-        fig.add_trace(go.Contour(
-            z=zz.T, x=xx[:, 0], y=yy[0],
-            colorscale=cmap, showscale=True,
-            contours=dict(showlines=False),
-            opacity=0.7
-        ))
+        # Plot bending KDE
+        if bending:
+            # Filter bending data
+            df_bending = merged_data.threshold_data(bending, False)
 
-        # Homography outline
+            xx, yy, zz_bending = PlottingPlotly._compute_kde(
+                df_bending, x_col, y_col, grid_limits, bw_bending)
+
+            # Apply percentage threshold to remove low-density values
+            bending_threshold = zz_bending.max() * threshold_percentage
+            zz_bending[zz_bending < bending_threshold] = float('nan')  # Mask low-density areas
+
+            fig.add_trace(go.Contour(
+                z=zz_bending.T, x=xx[:, 0], y=yy[0],
+                colorscale=cmap_bending,
+                showscale=True if not spikes else False,
+                contours=dict(showlines=False),
+                opacity=opacity,
+                name="Bending KDE"
+            ))
+
+        # Plot spikes KDE
+        if spikes:
+            # Filter spikes data
+            df_spikes = merged_data.threshold_data(False, spikes)
+
+            xx, yy, zz_spikes = PlottingPlotly._compute_kde(
+                df_spikes, x_col, y_col, grid_limits, bw_spikes)
+
+            # Apply percentage threshold to remove low-density values
+            spikes_threshold = zz_spikes.max() * threshold_percentage
+            zz_spikes[zz_spikes < spikes_threshold] = float('nan')  # Mask low-density areas
+
+            fig.add_trace(go.Contour(
+                z=zz_spikes.T, x=xx[:, 0], y=yy[0],
+                colorscale=cmap_spikes,
+                showscale=True,
+                contours=dict(showlines=False),
+                opacity=opacity,
+                name="Spikes KDE"
+            ))
+
+        # Add homography outline
         hp = np.vstack([homography_points, homography_points[0]])  # Close loop
         fig.add_trace(go.Scatter(
             x=hp[:, 0], y=hp[:, 1], mode='lines',
@@ -404,6 +482,7 @@ class PlottingPlotly(Plotting):
             name='Homography Bounds'
         ))
 
+        # Update layout
         fig.update_layout(
             title=title,
             xaxis_title=xlabel,

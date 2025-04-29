@@ -121,26 +121,8 @@ def run_labeling(config_path, processed_video_path):
         )
         st.success("🖼️ Frames extracted!")
 
-        # find your first frame folder
-        project_path      = Path(config_path).parent
-        labeled_data_dir  = project_path / "labeled-data"
-        frame_folders     = list(labeled_data_dir.glob("*"))
-        if not frame_folders:
-            st.error("❌ No frame folders found in labeled-data.")
-            return
-        image_folder = frame_folders[0]
-
-        st.info("🚀 Launching Napari labeling…")
-        # build the path to your script
-        root_dir     = Path(__file__).parent.parent  # pages/ → receptive_field_mapping_app/
-        script_path  = root_dir / "src" / "components" / "napari_labeling.py"
-
-        # Command to run the napari script with config_path and image_folder as arguments
-        cmd = [
-            sys.executable, str(script_path), str(config_path), str(image_folder)
-        ]
-        subprocess.Popen(cmd, cwd=str(root_dir))
-
+        subprocess.Popen([sys.executable, "-m", "napari"])
+        #! add instructions here explaining what to upload and in what order
         st.warning("📝 Napari is running—label your frames, then close Napari when you’re done.")
 
     except Exception as e:
@@ -154,8 +136,9 @@ def run_retraining(config_path, processed_video_path):
 
         st.info("🧠 Starting model training...")
         # Remove previous predictions
-        remove_previous_predictions(video_path=processed_video_path)
-        deeplabcut.train_network(config_path, autotune=False)
+        #remove_previous_predictions(video_path=processed_video_path)
+        #st.success("🗑️ Previous predictions removed!")
+        deeplabcut.train_network(config_path)
         st.success("✅ Training complete!")
 
         st.info("📈 Analyzing video again with updated model...")
@@ -223,6 +206,7 @@ def remove_previous_predictions(video_path):
     for file in prediction_files:
         try:
             os.remove(file)
+            st.success(f"Removed previous prediction file: {file}")
         except Exception as e:
             st.warning(f"Could not delete {file}: {e}")
     

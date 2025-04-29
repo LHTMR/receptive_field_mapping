@@ -108,7 +108,8 @@ class OutlierImputer:
                 try:
                     grid = GridSearchCV(model,
                                         param_grid,
-                                        scoring="neg_mean_squared_error", cv=3)
+                                        scoring="neg_mean_squared_error",
+                                        cv=3)
                     grid.fit(X_train, y_train)
                     mse = -grid.best_score_
 
