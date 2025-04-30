@@ -3,10 +3,6 @@ import numpy as np
 import tempfile
 import os
 
-import cv2
-import numpy as np
-import os
-
 def process_video_with_roi(input_path, output_path):
     """
     Process a video by allowing the user to select a Region of Interest (ROI)
