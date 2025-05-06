@@ -1,3 +1,4 @@
+import warnings
 from scipy.stats import gaussian_kde
 import tempfile
 import imageio.v2 as imageio  # newer version
@@ -8,6 +9,7 @@ import cv2
 from sklearn.preprocessing import MinMaxScaler
 from matplotlib.lines import Line2D
 from matplotlib.animation import FuncAnimation
+from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -19,9 +21,9 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 #! Make futurewarnings and runtimewarnings quiet for now
-import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 
 class PlottingPlotly(Plotting):
     @staticmethod
@@ -31,7 +33,8 @@ class PlottingPlotly(Plotting):
                          ylabel_1: str, ylabel_2: str,
                          title: str,
                          color_1: str = "#1f77b4",  # blue
-                         color_2: str = "#d62728"   # red
+                         color_2: str = "#d62728",   # red
+                         invert_y_2: bool = False
                          ) -> go.Figure:
         # Validate inputs
         Val.validate_dataframe(df, required_columns=columns, name="DataFrame")
@@ -41,38 +44,60 @@ class PlottingPlotly(Plotting):
                              title=title, color_1=color_1, color_2=color_2)
 
         try:
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            # Create the figure
+            fig = go.Figure()
 
-            # Plot first column on primary Y-axis
+            # Plot the first column (primary y-axis)
             fig.add_trace(
-                go.Scatter(x=df.index, y=df[columns[0]],
-                           name=columns[0],
-                           line=dict(color=color_1)),
-                secondary_y=False,
+                go.Scatter(
+                    x=df.index,
+                    y=df[columns[0]],
+                    name=ylabel_1,
+                    line=dict(color=color_1),
+                    yaxis="y1"
+                )
             )
 
-            # Plot second column on secondary Y-axis
+            # Plot the second column (secondary y-axis)
+            second_y_data = -df[columns[1]] if invert_y_2 else df[columns[1]]
             fig.add_trace(
-                go.Scatter(x=df.index, y=df[columns[1]],
-                           name=columns[1],
-                           line=dict(color=color_2)),
-                secondary_y=True,
+                go.Scatter(
+                    x=df.index,
+                    y=second_y_data,
+                    name=ylabel_2,
+                    line=dict(color=color_2),
+                    yaxis="y2"
+                )
             )
 
-            # Set titles
+            # Update layout
             fig.update_layout(
-                title=title,
-                title_x=0.5,
-                xaxis_title=xlabel,
-                # Have legend on normal spot on the right
-                legend=dict(x=1.05, y=1, traceorder="normal",
-                            orientation="v", font=dict(size=12)),
+                title=dict(text=title, x=0.5),
+                xaxis=dict(title=xlabel),
+                yaxis=dict(
+                    title=dict(text=ylabel_1, font=dict(color=color_1)),
+                    tickfont=dict(color=color_1),
+                    zeroline=True,  # Ensure the x-axis is visible
+                    zerolinecolor="black",
+                    zerolinewidth=2
+                ),
+                yaxis2=dict(
+                    title=dict(text=ylabel_2, font=dict(color=color_2)),
+                    tickfont=dict(color=color_2),
+                    overlaying="y",  # Overlay on the same plot
+                    side="right",    # Place ticks on the right side
+                    zeroline=True,   # Ensure the x-axis is visible
+                    zerolinecolor="black",
+                    zerolinewidth=2
+                ),
+                legend=dict(
+                    x=1.05, y=1,
+                    traceorder="normal",
+                    orientation="v",
+                    font=dict(size=12)
+                ),
                 margin=dict(t=50, b=60)
             )
-
-            # Y-axes labels
-            fig.update_yaxes(title_text=ylabel_1, secondary_y=False)
-            fig.update_yaxes(title_text=ylabel_2, secondary_y=True)
 
             return fig
 
@@ -92,7 +117,7 @@ class PlottingPlotly(Plotting):
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
         Val.validate_type(df_transformed_monofil, pd.DataFrame,
-                           "Transformed Monofilament Data")
+                          "Transformed Monofilament Data")
         Val.validate_positive(fps, "FPS", zero_allowed=False)
         Val.validate_strings(title=title, x_label=x_label,
                              y_label=y_label, color=color)
@@ -142,7 +167,7 @@ class PlottingPlotly(Plotting):
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
         Val.validate_type(df_transformed_monofil, pd.DataFrame,
-                           "Transformed Monofilament Data")
+                          "Transformed Monofilament Data")
         Val.validate_strings(title=title, color=color,
                              x_label=x_label, y_label=y_label)
 
@@ -195,8 +220,8 @@ class PlottingPlotly(Plotting):
                          args=[[None],
                                {"frame": {"duration": 0},
                                 "mode": "immediate",
-                                "transition":{"duration": 0}
-                         }])
+                                "transition": {"duration": 0}
+                                }])
                 ]
             )],
             sliders=[dict(
@@ -361,7 +386,7 @@ class PlottingPlotly(Plotting):
                      bw_method: float = 0.2):
         """
         Helper method to compute KDE for a given DataFrame.
-        
+
         Args:
             df (pd.DataFrame): DataFrame containing the data.
             x_col (str): Column name for x-axis data.
@@ -382,17 +407,17 @@ class PlottingPlotly(Plotting):
 
     @staticmethod
     def plot_kde_density(merged_data: MergedData,
-                        x_col: str, y_col: str,
-                        homography_points: np.ndarray,
-                        bending: bool = False,
-                        spikes: bool = False,
-                        bw_bending: float = 0.2,
-                        bw_spikes: float = 0.2,
-                        title: str = 'KDE Plot',
-                        xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
-                        cmap_bending: str = "Viridis",
-                        cmap_spikes: str = "Reds",
-                        threshold_percentage: float = 0.05):
+                         x_col: str, y_col: str,
+                         homography_points: np.ndarray,
+                         bending: bool = False,
+                         spikes: bool = False,
+                         bw_bending: float = 0.2,
+                         bw_spikes: float = 0.2,
+                         title: str = 'KDE Plot',
+                         xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
+                         cmap_bending: str = "Viridis",
+                         cmap_spikes: str = "Reds",
+                         threshold_percentage: float = 0.05):
         """
         Plots KDE density for bending and spikes on the same plot.
 
@@ -415,10 +440,10 @@ class PlottingPlotly(Plotting):
         # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
         Val.validate_strings(x_col=x_col, y_col=y_col,
-                            xlabel=xlabel, ylabel=ylabel, title=title,
-                            cmap_bending=cmap_bending, cmap_spikes=cmap_spikes)
+                             xlabel=xlabel, ylabel=ylabel, title=title,
+                             cmap_bending=cmap_bending, cmap_spikes=cmap_spikes)
         Val.validate_array(homography_points, shape=(4, 2),
-                        name="Homography Points")
+                           name="Homography Points")
         Val.validate_type(bending, bool, "Bending")
         Val.validate_type(spikes, bool, "Spikes")
 
@@ -442,7 +467,8 @@ class PlottingPlotly(Plotting):
 
             # Apply percentage threshold to remove low-density values
             bending_threshold = zz_bending.max() * threshold_percentage
-            zz_bending[zz_bending < bending_threshold] = float('nan')  # Mask low-density areas
+            zz_bending[zz_bending < bending_threshold] = float(
+                'nan')  # Mask low-density areas
 
             fig.add_trace(go.Contour(
                 z=zz_bending.T, x=xx[:, 0], y=yy[0],
@@ -463,7 +489,8 @@ class PlottingPlotly(Plotting):
 
             # Apply percentage threshold to remove low-density values
             spikes_threshold = zz_spikes.max() * threshold_percentage
-            zz_spikes[zz_spikes < spikes_threshold] = float('nan')  # Mask low-density areas
+            zz_spikes[zz_spikes < spikes_threshold] = float(
+                'nan')  # Mask low-density areas
 
             fig.add_trace(go.Contour(
                 z=zz_spikes.T, x=xx[:, 0], y=yy[0],

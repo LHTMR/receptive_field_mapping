@@ -100,15 +100,9 @@ class DataNeuron:
 
         # Calculate the downsampling factor
         downsample_factor = int(self.original_freq / target_freq)
-        print(downsample_factor)
 
         # Apply a rolling window with a maximum function to preserve binary components
         downsampled_df = pd.DataFrame()
-
-        # Downsample the time column by selecting the first value in the window
-        #downsampled_df['Time'] = \
-        #    self.df['Time'].rolling(window=downsample_factor,
-        #                                      min_periods=1).min()
 
         # Downsample the iff/freq column by picking the maximum value in the window
         downsampled_df['IFF'] = \

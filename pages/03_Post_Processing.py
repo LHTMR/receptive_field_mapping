@@ -11,6 +11,7 @@ import streamlit as st
 
 #! schedule a presentation practice? ask Magnus if needed
 
+
 def get_plot_inputs(default_title="",
                     default_x="index",
                     default_y="value",
@@ -41,7 +42,7 @@ def get_dual_y_axis_plot_inputs(default_title="",
                                 default_color1="#1f77b4",  # Blue
                                 default_color2="#d62728",  # Red
                                 key_prefix=""):
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
     with col1:
         title = st.text_input("Title", value=default_title,
@@ -61,8 +62,12 @@ def get_dual_y_axis_plot_inputs(default_title="",
     with col6:
         color_2 = st.color_picker("Color 2", default_color2,
                                   label_visibility="visible", key=f"{key_prefix}_color2")
+    with col7:
+        # button to invert the secondary y axis for clearer visibility
+        invert_y = st.checkbox("Invert Y Axis 2", value=False,
+                               label_visibility="visible", key=f"{key_prefix}_invert_y")
 
-    return title, x_label, y_label_1, y_label_2, color_1, color_2
+    return title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y
 
 
 def get_all_plotly_cmaps():
@@ -100,6 +105,7 @@ def get_temp_video_path(video_file, session_key="labeled_video_path"):
 
     return st.session_state[session_key]
 
+
 def assign_video_path(key="get_video_key"):
     # Optional input for video path, just mark as success if it's already in session state
     if "labeled_video_path" in st.session_state:
@@ -111,6 +117,7 @@ def assign_video_path(key="get_video_key"):
             st.session_state["labeled_video_path"] = get_temp_video_path(
                 video_file, session_key="labeled_video_path")
             st.success("Labeled video path assigned successfully!")
+
 
 st.title("Post Processing")
 st.write("This page is for post processing the prediction results together with recorded neuron data.")
@@ -430,15 +437,16 @@ with tab2:
             """)
         with st.expander("Plotting", expanded=False):
             # Get customization inputs for the plot
-            title, x_label, y_label_1, y_label_2, color_1, color_2 = get_dual_y_axis_plot_inputs(
-                default_title="Neuron Data, Original Sample Rate",
-                default_x="index",
-                default_y1="neuron spikes",
-                default_y2="IFF",
-                default_color1="#1f77b4",  # Blue
-                default_color2="#d62728",  # Red
-                key_prefix="neuron_plot"
-            )
+            title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y_2 = \
+                get_dual_y_axis_plot_inputs(
+                    default_title="Neuron Data, Original Sample Rate",
+                    default_x="index",
+                    default_y1="neuron spikes",
+                    default_y2="IFF",
+                    default_color1="#1f77b4",  # Blue
+                    default_color2="#d62728",  # Red
+                    key_prefix="neuron_plot"
+                )
             if st.checkbox("Plot Neuron Data"):
                 try:
                     # Make interactive dual-axis plot of neuron data
@@ -450,7 +458,8 @@ with tab2:
                         ylabel_1=y_label_1,
                         ylabel_2=y_label_2,
                         color_1=color_1,
-                        color_2=color_2
+                        color_2=color_2,
+                        invert_y_2=invert_y_2
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 except Exception as e:
@@ -469,15 +478,16 @@ with tab2:
 
         with st.expander("Plotting", expanded=False):
             # Get customization inputs for the plot
-            title, x_label, y_label_1, y_label_2, color_1, color_2 = get_dual_y_axis_plot_inputs(
-                default_title="Neuron Data, Downsampled",
-                default_x="index",
-                default_y1="Neuron Spikes",
-                default_y2="IFF",
-                default_color1="#1f77b4",  # Blue
-                default_color2="#d62728",  # Red
-                key_prefix="neuron_plot_downsampled"
-            )
+            title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y_2 = \
+                get_dual_y_axis_plot_inputs(
+                    default_title="Neuron Data, Downsampled",
+                    default_x="index",
+                    default_y1="Neuron Spikes",
+                    default_y2="IFF",
+                    default_color1="#1f77b4",  # Blue
+                    default_color2="#d62728",  # Red
+                    key_prefix="neuron_plot_downsampled"
+                )
             if st.checkbox("Downsample the Neuron Data"):
                 try:
                     # Make interactive dual-axis plot of downsampled neuron data
@@ -489,7 +499,8 @@ with tab2:
                         ylabel_1=y_label_1,
                         ylabel_2=y_label_2,
                         color_1=color_1,
-                        color_2=color_2
+                        color_2=color_2,
+                        invert_y_2=invert_y_2
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 except Exception as e:
@@ -558,15 +569,16 @@ with tab3:
             """)
         with st.expander("Plotting", expanded=False):
             # Get customization inputs for the plot
-            title, x_label, y_label_1, y_label_2, color_1, color_2 = get_dual_y_axis_plot_inputs(
-                default_title="Merged Data",
-                default_x="index",
-                default_y1="Neuron Spikes (filled)",
-                default_y2="Bending Binary",
-                default_color1="#1f77b4",  # Blue
-                default_color2="#d62728",  # Red
-                key_prefix="merged_plot"
-            )
+            title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y_2 = \
+                get_dual_y_axis_plot_inputs(
+                    default_title="Merged Data",
+                    default_x="index",
+                    default_y1="Neuron Spikes (filled)",
+                    default_y2="Bending Binary",
+                    default_color1="#1f77b4",  # Blue
+                    default_color2="#d62728",  # Red
+                    key_prefix="merged_plot"
+                )
 
             if st.checkbox("Plot Merged Data"):
                 try:
@@ -579,7 +591,8 @@ with tab3:
                         ylabel_1=y_label_1,
                         ylabel_2=y_label_2,
                         color_1=color_1,
-                        color_2=color_2
+                        color_2=color_2,
+                        invert_y_2=invert_y_2
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 except Exception as e:

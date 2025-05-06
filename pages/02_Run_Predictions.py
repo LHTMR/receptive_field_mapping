@@ -19,16 +19,6 @@ import shutil
 import time
 from pathlib import Path
 
-## TODO!
-### Clear video_sets in config.yaml before each run. DONE!
-### Make sure labeled_data and videos folder are cleared before each run. DONE!
-#### Create init function to remove above. DONE!
-### Change path written to config depending on Windows/Linux?
-### Create new tab for retraining, containing guide for Napari! (also make config and video paths global) DONE!
-### Make the final h5-file into a global variable in ST. DONE!
-### Change buttons workflow. DONE!
-### Remove unnecessary methods. predict, create label etc. DONE!
-
 tab1, tab2 = st.tabs(["Create Labeled Video", "Labeling / Retraining"])
 
 def init_project(config_path, project_path):
