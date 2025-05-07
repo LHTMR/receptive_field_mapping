@@ -3,6 +3,7 @@ import streamlit as st
 import os
 import cv2
 import numpy as np
+import pandas as pd
 import deeplabcut
 from glob import glob
 import subprocess
@@ -18,6 +19,8 @@ import yaml
 import shutil
 import time
 from pathlib import Path
+import matplotlib.pyplot as plt
+
 
 ## TODO!
 ### Change path written to config depending on Windows/Linux?
@@ -36,12 +39,21 @@ project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
 #project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
 config_path = os.path.join(project_path, "config.yaml")
 videos_dir = os.path.join(project_path, "videos")
+training_folder = os.path.join(
+            project_path,
+            "dlc-models-pytorch",
+            "iteration-0",
+            "td_res_3Mar18-trainset90shuffle1",
+            "train"
+        )
 
 # Save to session state
 st.session_state["project_path"] = project_path
 st.session_state["config_path"] = config_path
 st.session_state["videos_dir"] = videos_dir
+st.session_state["training_folder"] = training_folder
 
+# Create Tabs
 tab1, tab2 = st.tabs(["Create Labeled Video", "Labeling / Retraining"])
 
 def init_project(config_path, project_path):
@@ -71,13 +83,6 @@ def init_project(config_path, project_path):
                         shutil.rmtree(file_path)
 
         # 3. Clean snapshots except the ones we want to keep
-        training_folder = os.path.join(
-            project_path,
-            "dlc-models-pytorch",
-            "iteration-0",
-            "td_res_3Mar18-trainset90shuffle1",
-            "train"
-        )
         if os.path.exists(training_folder):
             for file in os.listdir(training_folder):
                 if (
@@ -91,6 +96,51 @@ def init_project(config_path, project_path):
     except Exception as e:
         st.error(f"❌ Failed to initialize project: {e}")
 
+def show_detector_training_loss_only(train_folder):
+    detector_stats_path = os.path.join(train_folder, "learning_stats_detector.csv")
+    if not os.path.exists(detector_stats_path):
+        return None
+
+    df = pd.read_csv(detector_stats_path)
+    fig, ax = plt.subplots(figsize=(5, 3))
+    ax.plot(df["step"], df["losses/train.total_loss"], label="Detector Train Loss", color='green')
+    ax.set_title("Detector Training Loss")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.legend()
+    return fig
+
+def show_pose_training_loss_only(train_folder):
+    stats_path = os.path.join(train_folder, "learning_stats.csv")
+    if not os.path.exists(stats_path):
+        return None
+
+    df = pd.read_csv(stats_path)
+    fig, ax = plt.subplots(figsize=(5, 3))
+    ax.plot(df["step"], df["losses/train.total_loss"], label="Pose Train Loss", color='blue')
+    ax.set_title("Pose Model Training Loss")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.legend()
+    return fig
+
+
+def show_training_plots(train_folder):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        fig1 = show_pose_training_loss_only(train_folder)
+        if fig1:
+            st.pyplot(fig1)
+        else:
+            st.warning("No pose training loss data to display.")
+
+    with col2:
+        fig2 = show_detector_training_loss_only(train_folder)
+        if fig2:
+            st.pyplot(fig2)
+        else:
+            st.warning("No detector training loss data to display.")
 
 def clear_training_datasets(project_path):
     training_datasets_path = os.path.join(project_path, "training-datasets")
@@ -108,7 +158,7 @@ def update_numframes2pick(config_path, selected_value):
         with open(config_path, 'r') as f:
             cfg = yaml.load(f)
 
-        current_value = cfg.get('numframes2pick', 5)
+        current_value = cfg.get('numframes2pick', 10)
         if current_value != selected_value:
             cfg['numframes2pick'] = selected_value
             with open(config_path, 'w') as f:
@@ -201,7 +251,7 @@ def run_retraining(config_path, processed_video_path,
     except Exception as e:
         st.error(f"❌ Failed to remove previous predictions: {e}")
         st.stop()  # Stop execution immediately
-    # TODO Remove previous training-set
+
     # Step 2: Create training dataset
     try:
         clear_training_datasets(project_path)
@@ -241,6 +291,8 @@ def run_retraining(config_path, processed_video_path,
                                  keepdeconvweights=True
                                  )
         st.success("✅ Training complete!")
+        st.markdown("### 📊 Training Loss Overview")
+        show_training_plots(training_folder)
     except Exception as e:
         st.error(f"❌ Failed to train the model: {e}")
         return  # Exit early if training fails
@@ -347,8 +399,9 @@ def create_labeled_video(config_path, video_path, shuffle=1):
 
 with tab1:
     st.title("DeepLabCut Video Prediction")
-
-    
+        # Initialize session state flag
+    if "labels_saved_tab1" not in st.session_state:
+        st.session_state["labels_saved_tab1"] = False
     # Init project, clear video directory, video_sets in config file
     # and old snapshots
     if not st.session_state["project_initialized"]:
@@ -389,34 +442,39 @@ with tab1:
     if "labeled_video_path" in st.session_state and os.path.exists(st.session_state["labeled_video_path"]):
         st.video(convert_to_streamlit_friendly(st.session_state["labeled_video_path"]))
         st.markdown("### ✅ Happy with the result? Save labels:")
-
-        if st.button("💾 Save Labels", key="save_labels_tab1") and not st.session_state["labels_saved"]:
+        st.markdown("### If not, move to the Labeling/Retraining tab:")
+        if st.button("💾 Save Labels", key="save_labels_tab1") and not st.session_state["labels_saved_tab1"]:
             try:
                 h5_files = glob(os.path.join(videos_dir, "*.h5"))
                 if not h5_files:
                     st.error("No .h5 file found in videos directory.")
                 else:
                     st.session_state["h5_path"] = h5_files[0]
-                    st.session_state["labels_saved"] = True
+                    st.session_state["labels_saved_tab1"] = True
                     st.success(f"✅ Labels saved: {st.session_state['h5_path']}")
                     st.info("🔜 You can now move to the *Post Processing* page.")
             except Exception as e:
                 st.error(f"Error saving labels: {e}")
 
     # Show success message after saving
-    if st.session_state["labels_saved"]:
+    if st.session_state["labels_saved_tab1"]:
         st.success("✅ Labels already saved. Move to the Post Processing page.")
 
 
 
 with tab2:
+    if "labels_saved_tab2" not in st.session_state:
+        st.session_state["labels_saved_tab2"] = False
+    if "retrained_in_tab2" not in st.session_state:
+        st.session_state["retrained_in_tab2"] = False
+
     if "config_path" in st.session_state and "processed_video_path" in st.session_state:
         config_path = st.session_state["config_path"]
         processed_video_path = st.session_state["processed_video_path"]
 
         st.markdown("## 🖼️ Extract Frames for Labeling")
 
-        # 👇 Frame count selector
+        # Frame count selector
         num_frames = st.slider(
             "Number of frames to extract:",
             min_value=5,
@@ -425,61 +483,49 @@ with tab2:
             value=10
         )
 
-        # 👇 Button to trigger full pipeline
         if st.button("1️⃣ Extract frames & launch labeling"):
             update_numframes2pick(config_path, num_frames)
             run_labeling(config_path, processed_video_path)
 
         st.markdown("---")
-        # Create two columns for sliders
+
         col1, col2 = st.columns(2)
+        num_epochs = col1.slider("Number of epochs to retrain the model:", 5, 50, step=5, value=25)
+        num_detector_epochs = col2.slider("Number of epochs for the detector:", 5, 100, step=5, value=50)
 
-        # Slider 1: Number of epochs to retrain the model
-        num_epochs = col1.slider(
-            "Number of epochs to retrain the model:",
-            min_value=5,
-            max_value=50,
-            step=5,
-            value=25
-        )
-
-        # Slider 2: Number of epochs for the detector
-        num_detector_epochs = col2.slider(
-            "Number of epochs for the detector:",
-            min_value=5,
-            max_value=100,
-            step=5,
-            value=50
-        )
-        # 🧠 Continue to retraining
         if st.button("2️⃣ Done labeling? Continue to retrain"):
             run_retraining(config_path, processed_video_path, num_epochs, num_detector_epochs)
 
-            # Try to find the new labeled video
             labeled_videos = glob(os.path.join(videos_dir, "*_labeled.mp4"))
             if labeled_videos:
                 st.session_state["labeled_video_path"] = labeled_videos[0]
-                st.session_state["labels_saved"] = False  # Reset saved state
+                st.session_state["labels_saved_tab2"] = False
+                st.session_state["retrained_in_tab2"] = True
 
+    else:
+        st.warning("⚠️ Please upload and process a video in Tab 1 first.")
+
+    # Show video and save labels section only if retraining occurred
+    if st.session_state.get("retrained_in_tab2", False):
         if "labeled_video_path" in st.session_state and os.path.exists(st.session_state["labeled_video_path"]):
             st.video(convert_to_streamlit_friendly(st.session_state["labeled_video_path"]))
             st.markdown("### ✅ Happy with the result? Save labels:")
+            st.markdown("### If not, adjust epochs and retrain again:")
 
-            if st.button("💾 Save Labels", key="save_labels_tab2") and not st.session_state.get("labels_saved", False):
+            if st.button("💾 Save Labels", key="save_labels_tab2") and not st.session_state.get("labels_saved_tab2", False):
                 try:
                     h5_files = glob(os.path.join(videos_dir, "*.h5"))
                     if not h5_files:
                         st.error("No .h5 file found in videos directory.")
                     else:
                         st.session_state["h5_path"] = h5_files[0]
-                        st.session_state["labels_saved"] = True
+                        st.session_state["labels_saved_tab2"] = True
+                        st.success(f"✅ Labels saved: {st.session_state['h5_path']}")
+                        st.info("🔜 You can now move to the *Post Processing* page.")
+                        st.stop()
                 except Exception as e:
                     st.error(f"Error saving labels: {e}")
 
-        # ✅ Always show success message if labels have been saved
-        if st.session_state.get("labels_saved", False):
-            st.success(f"✅ Labels saved: {st.session_state['h5_path']}")
-            st.info("🔜 You can now move to the *Post Processing* page.")
-
-    else:
-        st.warning("⚠️ Please upload and process a video in Tab 1 first.")
+    # Always show success message after saving
+    if st.session_state.get("labels_saved_tab2", False):
+        st.success("✅ Labels already saved. Move to the Post Processing page.")
