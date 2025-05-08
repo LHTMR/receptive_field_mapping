@@ -12,7 +12,6 @@ class DataDLC:
     # getting bending coefficient, homography, plotting, and saving the homography video
     def __init__(self, h5_file) -> None:
         df = pd.read_hdf(h5_file)
-        # Making slots for future dataframes/attributes
         self.df_square = None
         self.df_monofil = None
         self.df_likelihoods = None
@@ -43,32 +42,60 @@ class DataDLC:
                 f"Invalid h5 file. Please check the file format.\n{e}"
             )
 
-    def get_likelihoods(self) -> str:
+    def get_avg_likelihoods(self) -> str:
 
         overall_average = self.df_likelihoods.mean().mean()
         bodypart_average = self.df_likelihoods.mean()
         return f"Overall average likelihood: \n{overall_average}\n" + \
                f"Bodypart average likelihoods: \n{bodypart_average}"
 
+    def assign_homography_points(self,
+                                 start: int = 0,
+                                 end: int = 20) -> pd.DataFrame:
+        Val.validate_type(start, int, "Start")
+        Val.validate_type(end, int, "End")
+        Val.validate_positive(start, "Start", zero_allowed=True)
+        Val.validate_positive(end, "End", zero_allowed=True)
+        if start == end:
+            raise ValueError("Start and end points must be different.")
+
+        self.homography_points = np.array([[start, end],
+                                           [end, end],
+                                           [end, start],
+                                           [start, start]], dtype=np.float32)
+        return self.homography_points
+
     def impute_outliers(self,
                         std_threshold: int|float = 2,
                         square: bool = True,
-                        filament: bool = False,) -> None:
+                        filament: bool = False,
+                        model_name: str = None) -> None:
         Val.validate_type(std_threshold, (int, float), "STD Threshold")
         Val.validate_positive(std_threshold, "STD Threshold", zero_allowed=True)
         Val.validate_type(square, bool, "Square")
         Val.validate_type(filament, bool, "Filament")
+        if model_name: # None is allowed as a default value
+            Val.validate_type(model_name, str, "Model Name")
+
+        if square and filament: # if both are True
+            raise ValueError("Both square and filament cannot be True.")
+        if not square and not filament: # if both are False
+            raise ValueError("Either square or filament must be True.")
 
         outlier_imputer = OutlierImputer()
 
         # Impute outliers for the square and monofilament points
         if square:
             self.df_square = outlier_imputer.impute_outliers(self.df_square,
-                                                             std_threshold)
+                                                             std_threshold,
+                                                             model_name)
             return self.df_square
-        if filament:
+        elif filament:
             self.df_monofil = outlier_imputer.impute_outliers(self.df_monofil,
-                                                              std_threshold)
+                                                              std_threshold,
+                                                              model_name)
+            return self.df_monofil
+
 
     def get_bending_coefficients(self) -> pd.Series:
 
@@ -97,19 +124,6 @@ class DataDLC:
         self.df_bending_coefficients = pd.Series(bending_coefficients,
                                                  name='Bending_Coefficient')
         return self.df_bending_coefficients
-
-    def assign_homography_points(self,
-                                 start: int = 0,
-                                 end: int = 20) -> pd.DataFrame:
-        Val.validate_type(start, int, "Start")
-        Val.validate_type(end, int, "End")
-        Val.validate_positive(start, "Start", zero_allowed=True)
-        Val.validate_positive(end, "End", zero_allowed=True)
-        self.homography_points = np.array([[start, end],
-                                           [end, end],
-                                           [end, start],
-                                           [start, start]], dtype=np.float32)
-        return self.homography_points
 
     def apply_homography(self) -> pd.DataFrame:
 

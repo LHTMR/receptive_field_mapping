@@ -9,8 +9,6 @@ from src.post_processing.outlierimputer import OutlierImputer
 from src.post_processing.datadlc import DataDLC
 import streamlit as st
 
-#! schedule a presentation practice? ask Magnus if needed
-
 
 def get_plot_inputs(default_title="",
                     default_x="index",
@@ -168,100 +166,140 @@ with tab1:
     st.header("Processing")
     # Use the stored data_dlc object for further processing
     if st.session_state.data_dlc is not None:
-
         st.markdown("""
             #### Outliers
             The DLC data was processed to extract the square and monofilament
             points. The first two plots below are meant to visualize any potential
             outliers in the labeled data (square & monofilament) from its
-            derivatives. If the data looks out of the norm, then
-            consider taking the time to impute/replace the data below.
-            (It could take around 5 minutes and 10 minutes for the square and
-            monofilament data respectively)
+            derivatives.
+            If the data looks out of the norm, then consider taking the time to
+            impute/replace the data below. (It could take around 5 minutes and
+            10 minutes for the square and monofilament data respectively on
+            'All Models' setting)
+            Currently it will start on the default model BR, which is the 
+            recommended model.
             """)
-        with st.expander("Plotting & Imputing", expanded=False):
-            # Button to impute outliers
-            if st.checkbox("Plot Derivatives for Outlier Detection"):
-                try:
-                    # Make derivative interactive plots of data_dlc.df_square and data_dlc.df_monofil
-                    df_square_derivative = OutlierImputer.transform_to_derivative(
-                        st.session_state.data_dlc.df_square)
-                    df_monofil_derivative = OutlierImputer.transform_to_derivative(
-                        st.session_state.data_dlc.df_monofil)
 
+        df_square_derivative = OutlierImputer.transform_to_derivative(
+            st.session_state.data_dlc.df_square)
+        df_monofil_derivative = OutlierImputer.transform_to_derivative(
+            st.session_state.data_dlc.df_monofil)
+
+        # Initialize session state for imputation flags and parameters
+        if "imputed_square" not in st.session_state:
+            st.session_state.imputed_square = False
+        if "imputed_filament" not in st.session_state:
+            st.session_state.imputed_filament = False
+        if "last_square_params" not in st.session_state:
+            st.session_state.last_square_params = {"std_threshold": None, "model_name": None}
+        if "last_filament_params" not in st.session_state:
+            st.session_state.last_filament_params = {"std_threshold": None, "model_name": None}
+
+        # Get user inputs for std_threshold and model_name
+        col1, col2 = st.columns(2)
+        with col1:
+            std_threshold_square = st.number_input(
+                "Enter the std threshold for square outlier imputation:",
+                min_value=0.1, value=4.0, step=0.1, key="std_threshold_square"
+            )
+            std_threshold_filament = st.number_input(
+                "Enter the std threshold for filament outlier imputation:",
+                min_value=0.1, value=4.5, step=0.1, key="std_threshold_filament"
+            )
+        with col2:
+            model_name_square = st.selectbox(
+                "Select the model for square outlier imputation:",
+                options=["All Models"] + list(OutlierImputer.models.keys()),
+                index=6, key="model_name_square"
+            )
+            model_name_square = None if model_name_square == "All Models" else model_name_square
+
+            model_name_filament = st.selectbox(
+                "Select the model for filament outlier imputation:",
+                options=["All Models"] + list(OutlierImputer.models.keys()),
+                index=6, key="model_name_filament"
+            )
+            model_name_filament = None if model_name_filament == "All Models" else model_name_filament
+
+        # Reset imputation flags if parameters have changed
+        if (st.session_state.last_square_params["std_threshold"] != std_threshold_square or
+                st.session_state.last_square_params["model_name"] != model_name_square):
+            st.session_state.imputed_square = False
+            st.session_state.last_square_params = {"std_threshold": std_threshold_square, "model_name": model_name_square}
+
+        if (st.session_state.last_filament_params["std_threshold"] != std_threshold_filament or
+                st.session_state.last_filament_params["model_name"] != model_name_filament):
+            st.session_state.imputed_filament = False
+            st.session_state.last_filament_params = {"std_threshold": std_threshold_filament, "model_name": model_name_filament}
+
+        # Impute outliers for the square points
+        if not st.session_state.imputed_square:
+            st.session_state.data_dlc.impute_outliers(
+                std_threshold=std_threshold_square,
+                square=True,
+                filament=False,
+                model_name=model_name_square
+            )
+            st.session_state.imputed_square = True
+            st.success("Outliers imputed successfully for the square points!")
+        else:
+            st.info("Square points already imputed. Skipping this step.")
+
+        # Impute outliers for the filament points
+        if not st.session_state.imputed_filament:
+            st.session_state.data_dlc.impute_outliers(
+                std_threshold=std_threshold_filament,
+                square=False,
+                filament=True,
+                model_name=model_name_filament
+            )
+            st.session_state.imputed_filament = True
+            st.success("Outliers imputed successfully for the filament points!")
+        else:
+            st.info("Filament points already imputed. Skipping this step.")
+
+        with st.expander("Plotting Imputing Comparisons", expanded=False):
+            if st.checkbox("Plot Square Derivative Outlier Comparison"):
+                try:
+                    # Make interactive plot of square derivative
                     fig_square = px.line(
                         df_square_derivative, title="Square Derivative")
                     fig_square.update_layout(title_x=0.5)
+                    st.plotly_chart(fig_square, use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error plotting square derivative: {e}")
+                try: 
+                    # Make interactive plot of square derivative after imputation
+                    df_square_derivative_after = OutlierImputer.transform_to_derivative(
+                            st.session_state.data_dlc.df_square
+                        )
+                    fig_square_after = px.line(
+                        df_square_derivative_after, title="Square Derivative After Imputation")
+                    fig_square_after.update_layout(title_x=0.5)
+                    st.plotly_chart(fig_square_after, use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error plotting square derivative after imputation: {e}")
+
+            if st.checkbox("Plot Monofilament Derivative Outlier Comparison"):
+                try:
+                    # Make interactive plot of monofilament derivative
                     fig_monofil = px.line(
                         df_monofil_derivative, title="Monofilament Derivative")
                     fig_monofil.update_layout(title_x=0.5)
-                    st.plotly_chart(fig_square, use_container_width=True)
                     st.plotly_chart(fig_monofil, use_container_width=True)
                 except Exception as e:
-                    st.error(f"Error imputing outliers: {e}")
-
-            # Impute outliers for the square points
-            if st.checkbox("Impute Square Outliers (Optional)"):
+                    st.error(f"Error plotting monofilament derivative: {e}")
                 try:
-                    # Get the standard deviation threshold from the user
-                    std_threshold = st.number_input(
-                        "Enter the standard deviation threshold for outlier imputation:",
-                        min_value=0.1, value=4.0, step=0.1
-                    )
-
-                    # Add a button to confirm the input and start processing
-                    if st.button("Impute Square Outliers"):
-                        st.session_state.data_dlc.impute_outliers(
-                            std_threshold=std_threshold,
-                            square=True,
-                            filament=False
-                        )
-                        st.success(
-                            "Outliers imputed successfully for the square points!")
-
-                        # Make derivative interactive plot of imputed data_dlc.df_square
-                        df_square_derivative_after = OutlierImputer.transform_to_derivative(
-                            st.session_state.data_dlc.df_square
-                        )
-                        fig_square = px.line(
-                            df_square_derivative_after, title="Square Derivative After Imputation")
-                        fig_square.update_layout(title_x=0.5)
-                        st.plotly_chart(
-                            fig_square, use_container_width=True, key="square_derivative_chart")
-                except Exception as e:
-                    st.error(f"Error imputing outliers: {e}")
-
-            # Impute outliers for the filament points
-            if st.checkbox("Impute Filament Outliers (Optional)"):
-                try:
-                    # Get the standard deviation threshold from the user
-                    std_threshold = st.number_input(
-                        "Enter the standard deviation threshold for outlier imputation:",
-                        min_value=0.1, value=4.0, step=0.1,
-                        key="filament_threshold_input"
-                    )
-
-                    # Add a button to confirm the input and start processing
-                    if st.button("Impute Filament Outliers"):
-                        st.session_state.data_dlc.impute_outliers(
-                            std_threshold=std_threshold,
-                            square=False,
-                            filament=True
-                        )
-                        st.success(
-                            "Outliers imputed successfully for the filament points!")
-
-                        # Make derivative interactive plot of imputed data_dlc.df_monofil
-                        df_monofil_derivative_after = OutlierImputer.transform_to_derivative(
+                    # Make interactive plot of monofilament derivative after imputation
+                    df_monofil_derivative_after = OutlierImputer.transform_to_derivative(
                             st.session_state.data_dlc.df_monofil
                         )
-                        fig_monofil = px.line(
-                            df_monofil_derivative_after, title="Monofilament Derivative After Imputation")
-                        fig_monofil.update_layout(title_x=0.5)
-                        st.plotly_chart(
-                            fig_monofil, use_container_width=True, key="filament_derivative_chart")
+                    fig_monofil_after = px.line(
+                        df_monofil_derivative_after, title="Monofilament Derivative After Imputation")
+                    fig_monofil_after.update_layout(title_x=0.5)
+                    st.plotly_chart(fig_monofil_after, use_container_width=True)
                 except Exception as e:
-                    st.error(f"Error imputing outliers: {e}")
+                    st.error(f"Error plotting monofilament derivative after imputation: {e}")
 
         st.markdown("""
             #### Bending Coefficients
