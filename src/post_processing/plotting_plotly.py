@@ -141,6 +141,10 @@ class PlottingPlotly(Plotting):
         square_colors = plt.get_cmap(square_cmap)(np.linspace(0, 1, len(df_square.columns) // 2))
         filament_colors = plt.get_cmap(filament_cmap)(np.linspace(0, 1, len(df_monofil.columns) // 2))
 
+        # Convert colors to BGR and scale to 0–255
+        square_colors = [(int(c[2] * 255), int(c[1] * 255), int(c[0] * 255)) for c in square_colors]
+        filament_colors = [(int(c[2] * 255), int(c[1] * 255), int(c[0] * 255)) for c in filament_colors]
+
         # Use imageio writer with proper codec
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmpfile:
             temp_path = tmpfile.name
@@ -157,14 +161,14 @@ class PlottingPlotly(Plotting):
             for i in range(len(df_square.columns) // 2):  # Assuming x, y pairs
                 x = int(df_square.iloc[frame_idx, i * 2])
                 y = int(df_square.iloc[frame_idx, i * 2 + 1])
-                color = tuple((square_colors[i][:3] * 255).astype(int))  # Convert to RGB
+                color = square_colors[i]  # Use precomputed BGR color
                 cv2.circle(frame, (x, y), radius=5, color=color, thickness=-1)
 
             # Draw filament points
             for i in range(len(df_monofil.columns) // 2):  # Assuming x, y pairs
                 x = int(df_monofil.iloc[frame_idx, i * 2])
                 y = int(df_monofil.iloc[frame_idx, i * 2 + 1])
-                color = tuple((filament_colors[i][:3] * 255).astype(int))  # Convert to RGB
+                color = filament_colors[i]  # Use precomputed BGR color
                 cv2.circle(frame, (x, y), radius=5, color=color, thickness=-1)
 
             # Convert frame to RGB for imageio
