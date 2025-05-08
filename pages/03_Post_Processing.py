@@ -169,15 +169,12 @@ with tab1:
         st.markdown("""
             #### Outliers
             The DLC data was processed to extract the square and monofilament
-            points. The first two plots below are meant to visualize any potential
-            outliers in the labeled data (square & monofilament) from its
-            derivatives.
-            If the data looks out of the norm, then consider taking the time to
-            impute/replace the data below. (It could take around 5 minutes and
-            10 minutes for the square and monofilament data respectively on
-            'All Models' setting)
-            Currently it will start on the default model BR, which is the 
-            recommended model.
+            points. The outliers of these are then detected from the derivative
+            and imputed via machine learning models. Currently it will default
+            to the recommended BR model, but you can select any of the other model.
+            The plots will then show the derivative of the square and monofilament
+            points before and after the imputation, if there are still spikes
+            above 20-50 then consider raising the threshold.
             """)
 
         df_square_derivative = OutlierImputer.transform_to_derivative(

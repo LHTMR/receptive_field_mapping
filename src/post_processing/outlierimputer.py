@@ -118,7 +118,7 @@ class OutlierImputer:
                                          HistGradientBoostingRegressor(),
                                          KNeighborsRegressor(n_neighbors=10)]
 
-    def iterative_imputation(self, df: pd.DataFrame, max_iter=100) -> pd.DataFrame:
+    def iterative_imputation(self, df: pd.DataFrame, max_iter=1000) -> pd.DataFrame:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
         Val.validate_type(max_iter, int, "Max Iterations")
         Val.validate_positive(max_iter, "Max Iterations")

@@ -3,6 +3,7 @@ from scipy.stats import gaussian_kde
 import tempfile
 import imageio.v2 as imageio  # newer version
 from src.post_processing.validation import Validation as Val
+from src.post_processing.datadlc import DataDLC
 from src.post_processing.mergeddata import MergedData
 from src.post_processing.plotting import Plotting
 import cv2
@@ -103,6 +104,82 @@ class PlottingPlotly(Plotting):
 
         except Exception as e:
             raise Exception(f"Error generating dual-axis Plotly chart: {e}")
+
+    @staticmethod
+    def generate_labeled_video(dlc_data: DataDLC,
+                            video_path: str,
+                            square_cmap: str = "Accent",
+                            filament_cmap: str = "Blues") -> bytes:
+        """
+        Generates a labeled video with square and filament points drawn on each frame.
+
+        Args:
+            dlc_data (DataDLC): Data object containing square and filament points.
+            video_path (str): Path to the input video.
+            square_cmap (str): Matplotlib colormap for square points.
+            filament_cmap (str): Matplotlib colormap for filament points.
+
+        Returns:
+            bytes: The labeled video as a bytes object.
+        """
+        # Validate inputs
+        Val.validate_type(dlc_data, DataDLC, "DLC Data")
+        Val.validate_path(video_path, file_types=[".mp4", ".avi"])
+        Val.validate_strings(square_cmap=square_cmap, filament_cmap=filament_cmap)
+
+        # Extract data
+        df_square = dlc_data.df_square.copy()
+        df_monofil = dlc_data.df_monofil.copy()
+
+        # Open the video
+        cap = cv2.VideoCapture(video_path)
+        frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # Get Matplotlib colormaps
+        square_colors = plt.get_cmap(square_cmap)(np.linspace(0, 1, len(df_square.columns) // 2))
+        filament_colors = plt.get_cmap(filament_cmap)(np.linspace(0, 1, len(df_monofil.columns) // 2))
+
+        # Use imageio writer with proper codec
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmpfile:
+            temp_path = tmpfile.name
+
+        writer = imageio.get_writer(temp_path, fps=frame_rate, codec='libx264')
+
+        frame_idx = 0
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            # Draw square points
+            for i in range(len(df_square.columns) // 2):  # Assuming x, y pairs
+                x = int(df_square.iloc[frame_idx, i * 2])
+                y = int(df_square.iloc[frame_idx, i * 2 + 1])
+                color = tuple((square_colors[i][:3] * 255).astype(int))  # Convert to RGB
+                cv2.circle(frame, (x, y), radius=5, color=color, thickness=-1)
+
+            # Draw filament points
+            for i in range(len(df_monofil.columns) // 2):  # Assuming x, y pairs
+                x = int(df_monofil.iloc[frame_idx, i * 2])
+                y = int(df_monofil.iloc[frame_idx, i * 2 + 1])
+                color = tuple((filament_colors[i][:3] * 255).astype(int))  # Convert to RGB
+                cv2.circle(frame, (x, y), radius=5, color=color, thickness=-1)
+
+            # Convert frame to RGB for imageio
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            writer.append_data(frame_rgb)
+
+            frame_idx += 1
+
+        cap.release()
+        writer.close()
+
+        # Return the video as bytes
+        with open(temp_path, "rb") as f:
+            return f.read()
+        
 
     @staticmethod
     def generate_homography_video(homography_points: np.ndarray,
