@@ -20,7 +20,9 @@ import shutil
 import time
 from pathlib import Path
 import matplotlib.pyplot as plt
-
+from src.post_processing.datadlc import DataDLC
+from src.post_processing.outlierimputer import OutlierImputer
+from src.post_processing.plotting_plotly import PlottingPlotly
 
 ## TODO!
 ### Change path written to config depending on Windows/Linux?
@@ -170,6 +172,21 @@ def update_numframes2pick(config_path, selected_value):
         st.error(f"❌ Failed to check/update config.yaml: {e}")
         raise
 
+def save_h5_to_session(videos_dir: str) -> str | None:
+    """Find the first .h5 file in the videos directory and store it in session state."""
+    try:
+        h5_files = glob(os.path.join(videos_dir, "*.h5"))
+        if not h5_files:
+            return None
+        h5_path = h5_files[0]
+        st.session_state["h5_path"] = h5_path
+        st.success("h5 saved into session state")
+        return h5_path
+    except Exception as e:
+        st.error(f"Error accessing .h5 files: {e}")
+        return None
+
+
 def delete_prev_pred(project_path):
     predictions_removed = False
 
@@ -227,7 +244,6 @@ def run_labeling(config_path, processed_video_path):
         deeplabcut.extract_frames(
             config_path,
             mode='automatic',
-            algo='uniform',
             crop=False,
             userfeedback=False
         )
@@ -269,11 +285,11 @@ def run_retraining(config_path, processed_video_path,
     # Step 3: Train the model
     try:
         detector_path = os.path.join(
-        project_path,
+        training_folder,
         "snapshot-detector-200.pt"   
         )
         snapshot_path = os.path.join(
-        project_path,
+        training_folder,
         "snapshot-075.pt"   
         )
         st.info("🧠 Starting model training...")
@@ -296,7 +312,6 @@ def run_retraining(config_path, processed_video_path,
     except Exception as e:
         st.error(f"❌ Failed to train the model: {e}")
         return  # Exit early if training fails
-
     # Step 4: Analyze video with the updated model
     try:
         st.info("📈 Analyzing video again with updated model...")
@@ -304,21 +319,16 @@ def run_retraining(config_path, processed_video_path,
         st.success("🎉 New predictions generated!")
     except Exception as e:
         st.error(f"❌ Failed to analyze video: {e}")
-        return  # Exit early if analysis fails
-
-    # Step 5: Create labeled video
+    # Step 5: Create labeled video with homography and outlier imputing
     try:
-        st.info("Creating Labeled Video")
-        deeplabcut.create_labeled_video(config=config_path,
-                                        videos=processed_video_path,
-                                        shuffle=1)
-        st.success("🎬 Labeled video created!")
+        # Create h5 session state 
+        h5_path = save_h5__to_session(videos_dir=videos_dir)
+        # Create DataDLC object
+        dlc_data = DataDLC(h5_file=h5_path)
+        # Create labeled video
+        PlottingPlotly.generate_labeled_video(dlc_data,processed_video_path)
     except Exception as e:
-        st.error(f"❌ Failed to create labeled video: {e}")
-
-
-    except Exception as e:
-        st.error(f"❌ Retraining failed: {e}")
+        st.error(f"❌ Could not generate video: {e}")
 
 def convert_to_streamlit_friendly(input_video_path):
     """Convert video to H.264-encoded MP4 for Streamlit compatibility using ffmpeg."""
@@ -343,7 +353,7 @@ def convert_to_streamlit_friendly(input_video_path):
 
 def preprocess_video(input_video_path, output_video_path):
     """Preprocesses the video: removes audio, scales it to fit 1274x720, centers it, and sets 30 FPS."""
-    target_width, target_height = 1274, 720
+    target_width, target_height = 1280, 720
     cap = cv2.VideoCapture(input_video_path)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_video_path, fourcc, 30.0, (target_width, target_height))
@@ -370,55 +380,25 @@ def preprocess_video(input_video_path, output_video_path):
     out.release()
     return output_video_path
 
-def create_labeled_video(config_path, video_path, shuffle=1):
-    # Print the video path for debugging
-    print(f"Creating labeled video for: {video_path}")
-    
-    # Create labeled video with DeepLabCut (this will automatically save it in the videos folder)
-    try:
-        deeplabcut.create_labeled_video(config_path,
-                                        videos=video_path,
-                                        shuffle=shuffle)
-        print("DeepLabCut create_labeled_video function executed")
-    except Exception as e:
-        print(f"Error creating labeled video: {e}")
-    
-    # Get the path of the labeled video by searching for files in the same folder as the input video
-    video_dir = os.path.dirname(video_path)
-    labeled_video_files = [f for f in os.listdir(video_dir) if f.endswith('_labeled.mp4')]
-
-    if labeled_video_files:
-        # If labeled video is found, return its full path
-        labeled_video_path = os.path.join(video_dir, labeled_video_files[0])
-        print(f"Labeled video found at {labeled_video_path}")
-        return labeled_video_path
-    else:
-        print(f"Labeled video not found in {video_dir}")
-        return None
-
-
 with tab1:
     st.title("DeepLabCut Video Prediction")
-        # Initialize session state flag
-    if "labels_saved_tab1" not in st.session_state:
-        st.session_state["labels_saved_tab1"] = False
-    # Init project, clear video directory, video_sets in config file
-    # and old snapshots
+
+    # Initialize project
     if not st.session_state["project_initialized"]:
         init_project(config_path=config_path, project_path=project_path)
         os.makedirs(videos_dir, exist_ok=True)
         st.session_state["project_initialized"] = True
-    
-    # Upload and preprocess
+
+    # Upload and preprocess video
     uploaded_video = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
     if uploaded_video is not None and "processed_video_path" not in st.session_state:
-        original_name = Path(uploaded_video.name).stem  # No extension
+        original_name = Path(uploaded_video.name).stem
         temp_input_path = os.path.join(videos_dir, uploaded_video.name)
-        
+
         with open(temp_input_path, "wb") as f:
             f.write(uploaded_video.read())
 
-        processed_video_name = f"processed_{original_name}.mp4"  # Always .mp4 now
+        processed_video_name = f"processed_{original_name}.mp4"
         processed_video_path = os.path.join(videos_dir, processed_video_name)
 
         st.write("Preprocessing video...")
@@ -427,54 +407,37 @@ with tab1:
         st.success("✅ Video preprocessed and saved.")
         st.session_state["processed_video_path"] = processed_video_path
 
-    # Prediction button
+    # Prediction + Post-processing
     if "processed_video_path" in st.session_state and "labeled_video_path" not in st.session_state:
         if st.button("Run Prediction and Create Labeled Video"):
-            st.write("Running DeepLabCut Prediction...")
-            deeplabcut.analyze_videos(config_path, [st.session_state["processed_video_path"]])
-            labeled_video_path = create_labeled_video(config_path, st.session_state["processed_video_path"])
-
-            if labeled_video_path and os.path.exists(labeled_video_path):
-                st.session_state["labeled_video_path"] = labeled_video_path
-                st.success("✅ Labeled video created!")
-
-    # Show labeled video and Save Labels button
-    if "labeled_video_path" in st.session_state and os.path.exists(st.session_state["labeled_video_path"]):
-        st.video(convert_to_streamlit_friendly(st.session_state["labeled_video_path"]))
-        st.markdown("### ✅ Happy with the result? Save labels:")
-        st.markdown("### If not, move to the Labeling/Retraining tab:")
-        if st.button("💾 Save Labels", key="save_labels_tab1") and not st.session_state["labels_saved_tab1"]:
             try:
-                h5_files = glob(os.path.join(videos_dir, "*.h5"))
-                if not h5_files:
-                    st.error("No .h5 file found in videos directory.")
-                else:
-                    st.session_state["h5_path"] = h5_files[0]
-                    st.session_state["labels_saved_tab1"] = True
-                    st.success(f"✅ Labels saved: {st.session_state['h5_path']}")
-                    st.info("🔜 You can now move to the *Post Processing* page.")
+                st.info("📈 Analyzing video with DeepLabCut...")
+                deeplabcut.analyze_videos(config_path, [st.session_state["processed_video_path"]], shuffle=1)
+                st.success("🎉 New predictions generated!")
+
+                # Save h5 to session
+                h5_path = save_h5_to_session(videos_dir=videos_dir)
+
+                # Generate labeled video using DataDLC
+                dlc_data = DataDLC(h5_file=h5_path)
+                PlottingPlotly.generate_labeled_video(dlc_data, st.session_state["processed_video_path"])
+
+                st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page")
+                st.markdown("### If not, move to the **Labeling/Retraining** tab:")
+                st.session_state["labeled_video_path"] = os.path.join(videos_dir, Path(h5_path).stem + "_labeled.mp4")
+
+                st.stop()
+
             except Exception as e:
-                st.error(f"Error saving labels: {e}")
-
-    # Show success message after saving
-    if st.session_state["labels_saved_tab1"]:
-        st.success("✅ Labels already saved. Move to the Post Processing page.")
-
-
+                st.error(f"❌ Could not complete prediction or labeling: {e}")
 
 with tab2:
-    if "labels_saved_tab2" not in st.session_state:
-        st.session_state["labels_saved_tab2"] = False
-    if "retrained_in_tab2" not in st.session_state:
-        st.session_state["retrained_in_tab2"] = False
-
     if "config_path" in st.session_state and "processed_video_path" in st.session_state:
         config_path = st.session_state["config_path"]
         processed_video_path = st.session_state["processed_video_path"]
 
         st.markdown("## 🖼️ Extract Frames for Labeling")
 
-        # Frame count selector
         num_frames = st.slider(
             "Number of frames to extract:",
             min_value=5,
@@ -494,38 +457,23 @@ with tab2:
         num_detector_epochs = col2.slider("Number of epochs for the detector:", 5, 100, step=5, value=50)
 
         if st.button("2️⃣ Done labeling? Continue to retrain"):
-            run_retraining(config_path, processed_video_path, num_epochs, num_detector_epochs)
+            try:
+                run_retraining(config_path, processed_video_path, num_epochs, num_detector_epochs)
+                st.success("✅ Retraining complete.")
 
-            labeled_videos = glob(os.path.join(videos_dir, "*_labeled.mp4"))
-            if labeled_videos:
-                st.session_state["labeled_video_path"] = labeled_videos[0]
-                st.session_state["labels_saved_tab2"] = False
-                st.session_state["retrained_in_tab2"] = True
+                # Save h5 and generate labeled video
+                h5_path = save_h5_to_session(videos_dir=videos_dir)
+                dlc_data = DataDLC(h5_file=h5_path)
+                PlottingPlotly.generate_labeled_video(dlc_data, processed_video_path)
 
+                st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page")
+                st.markdown("### If not, adjust parameters and retrain again:")
+                st.session_state["labeled_video_path"] = os.path.join(videos_dir, Path(h5_path).stem + "_labeled.mp4")
+
+                st.stop()
+
+            except Exception as e:
+                st.error(f"❌ Error during retraining or video generation: {e}")
     else:
         st.warning("⚠️ Please upload and process a video in Tab 1 first.")
 
-    # Show video and save labels section only if retraining occurred
-    if st.session_state.get("retrained_in_tab2", False):
-        if "labeled_video_path" in st.session_state and os.path.exists(st.session_state["labeled_video_path"]):
-            st.video(convert_to_streamlit_friendly(st.session_state["labeled_video_path"]))
-            st.markdown("### ✅ Happy with the result? Save labels:")
-            st.markdown("### If not, adjust epochs and retrain again:")
-
-            if st.button("💾 Save Labels", key="save_labels_tab2") and not st.session_state.get("labels_saved_tab2", False):
-                try:
-                    h5_files = glob(os.path.join(videos_dir, "*.h5"))
-                    if not h5_files:
-                        st.error("No .h5 file found in videos directory.")
-                    else:
-                        st.session_state["h5_path"] = h5_files[0]
-                        st.session_state["labels_saved_tab2"] = True
-                        st.success(f"✅ Labels saved: {st.session_state['h5_path']}")
-                        st.info("🔜 You can now move to the *Post Processing* page.")
-                        st.stop()
-                except Exception as e:
-                    st.error(f"Error saving labels: {e}")
-
-    # Always show success message after saving
-    if st.session_state.get("labels_saved_tab2", False):
-        st.success("✅ Labels already saved. Move to the Post Processing page.")
