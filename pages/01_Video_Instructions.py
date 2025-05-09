@@ -1,9 +1,10 @@
 import streamlit as st
 from PIL import Image
+from pathlib import Path
 import os
 
 # Set path to assets folder
-ASSETS_PATH = "C:/Python Programming/LIU/receptive_field_mapping_app/assets"
+ASSETS_PATH = Path("assets")
 
 # App title
 st.title("🎥 Recording Instructions and Requirements")
