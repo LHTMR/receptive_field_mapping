@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 from src.post_processing.datadlc import DataDLC
 from src.post_processing.outlierimputer import OutlierImputer
 from src.post_processing.plotting_plotly import PlottingPlotly
+from pathlib import Path
+from PIL import Image
 
 ## TODO!
 ### Change path written to config depending on Windows/Linux?
@@ -37,8 +39,8 @@ if "project_initialized" not in st.session_state:
     st.session_state["project_initialized"] = False
 
 # Setup paths
-project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
-#project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
+#project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
+project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
 config_path = os.path.join(project_path, "config.yaml")
 videos_dir = os.path.join(project_path, "videos")
 training_folder = os.path.join(
@@ -250,11 +252,51 @@ def run_labeling(config_path, processed_video_path):
         st.success("🖼️ Frames extracted!")
 
         subprocess.Popen([sys.executable, "-m", "napari"])
-        #! add instructions here explaining what to upload and in what order
+        napari_instructions()
         st.warning("📝 Napari is running—label your frames, then close Napari when you’re done.")
 
     except Exception as e:
         st.error(f"❌ Frame extraction or labeling failed: {e}")
+
+def napari_instructions():
+    st.markdown("""
+    ### 📝 Napari Instructions
+    All these steps must be followed in order; otherwise, Napari-DeepLabCut may not display elements correctly.
+    """)
+
+    ASSETS_PATH = Path("assets")
+
+    # Step 1
+    st.markdown("""
+    #### Step 1
+    Click `Plugins -> Keypoint controls` in the top left, which will load a sidebar on the right side. Feel free to ignore the tutorial pop-up.
+    """)
+    st.image(ASSETS_PATH / "step 1.png", caption="")
+
+    # Step 2
+    st.markdown("""
+    #### Step 2
+    Click `File -> Open File(s)...`, navigate to the folder containing the project folder, then select open on the config file.
+    """)
+    st.image(ASSETS_PATH / "step 2.png", caption="")
+    st.image(ASSETS_PATH / "step 3.png", caption="")
+
+    # Step 3
+    st.markdown("""
+    #### Step 3
+    Click `File -> Open Folder...`, navigate into the `labeled-data` folder. Within should now be a folder with a name similar to the uploaded video. 
+    Select open on that folder. Finally, select `napari DeepLabCut`. Now label the images!
+    """)
+    st.image(ASSETS_PATH / "step 4.png", caption="")
+    st.image(ASSETS_PATH / "step 5.png", caption="")
+
+    # Step 4
+    st.markdown("""
+    #### Step 4
+    Once labeling has been completed, click `File -> Save Selected Layer(s)` while `CollectedData_conv_vid` is selected. 
+    Then you can now close Napari and move on!
+    """)
+    st.image(ASSETS_PATH / "step 6.png", caption="")
 
 def run_retraining(config_path, processed_video_path,
                    num_epochs=25, num_detector_epochs=50):

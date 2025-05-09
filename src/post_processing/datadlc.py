@@ -82,15 +82,15 @@ class DataDLC:
         if not square and not filament: # if both are False
             raise ValueError("Either square or filament must be True.")
 
-        outlier_imputer = OutlierImputer()
-
         # Impute outliers for the square and monofilament points
         if square:
+            outlier_imputer = OutlierImputer("latest_square.json")
             self.df_square = outlier_imputer.impute_outliers(self.df_square,
                                                              std_threshold,
                                                              model_name)
             return self.df_square
         elif filament:
+            outlier_imputer = OutlierImputer("latest_filament.json")
             self.df_monofil = outlier_imputer.impute_outliers(self.df_monofil,
                                                               std_threshold,
                                                               model_name)
