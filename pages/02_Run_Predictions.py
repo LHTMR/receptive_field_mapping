@@ -7,7 +7,6 @@ import pandas as pd
 import deeplabcut
 from glob import glob
 import subprocess
-import tempfile
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 import pathlib
@@ -21,31 +20,13 @@ import matplotlib.pyplot as plt
 from src.post_processing.datadlc import DataDLC
 from src.post_processing.plotting_plotly import PlottingPlotly
 from pathlib import Path
-from PIL import Image
 
 # Init session state flags
 if "project_initialized" not in st.session_state:
     st.session_state["project_initialized"] = False
 
-# Setup paths
 #project_path = r"C:\Users\sweer\Desktop\td_res_3-conv_vid-2025-03-18"
-project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
-config_path = os.path.join(project_path, "config.yaml")
-videos_dir = os.path.join(project_path, "videos")
-### Needs to change with new model!
-training_folder = os.path.join(
-            project_path,
-            "dlc-models-pytorch",
-            "iteration-0",
-            "td_res_3Mar18-trainset90shuffle1",
-            "train"
-        )
-
-# Save to session state
-st.session_state["project_path"] = project_path
-st.session_state["config_path"] = config_path
-st.session_state["videos_dir"] = videos_dir
-st.session_state["training_folder"] = training_folder
+#project_path = r"C:\Python Programming\LIU\projects\td_res_3-conv_vid-2025-03-18"
 
 # Create Tabs
 tab1, tab2 = st.tabs(["Create Labeled Video", "Labeling / Retraining"])
@@ -55,10 +36,11 @@ def init_project(config_path, project_path):
         yaml = YAML()
         yaml.preserve_quotes = True
 
-        # 1. Clear video_sets in config.yaml
+        # 1. Clear video_sets and add project path in config.yaml
         with open(config_path, 'r') as f:
             cfg = yaml.load(f)
         cfg['video_sets'] = {}
+        cfg['project_path'] = str(project_path)
         with open(config_path, 'w') as f:
             yaml.dump(cfg, f)
 
@@ -74,22 +56,22 @@ def init_project(config_path, project_path):
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)
 
-        st.success("✅ Project initialized: config cleared, videos/labeled-data cleaned.")
+        st.success("✅ Project initialized: config updated, videos/labeled-data cleaned.")
     
     except Exception as e:
         st.error(f"❌ Failed to initialize project: {e}")
 
-def clean_snapshots(training_folder):
+def clean_snapshots(train_folder):
     """
     Deletes all snapshot files in the training folder except for the
     ones explicitly allowed to remain.
     """
     keep_files = {"snapshot-075.pt", "snapshot-detector-200.pt"}
 
-    if os.path.exists(training_folder):
-        for file in os.listdir(training_folder):
+    if os.path.exists(train_folder):
+        for file in os.listdir(train_folder):
             if file.startswith("snapshot-") and file.endswith(".pt") and file not in keep_files:
-                os.remove(os.path.join(training_folder, file))
+                os.remove(os.path.join(train_folder, file))
         st.success("🧹 Snapshots cleaned: Only selected files kept.")
     else:
         st.warning("⚠️ Training folder not found.")
@@ -295,7 +277,7 @@ def run_retraining(config_path, processed_video_path,
     # Add video to config.yaml
     add_video_to_config(config_path, processed_video_path)
     # Remove undesired snapshots
-    clean_snapshots(training_folder=training_folder)
+    clean_snapshots(train_folder=train_folder)
     # Remove previous predictions
     try:
         st.info("🛠️ Removing previous predictions")
@@ -322,11 +304,11 @@ def run_retraining(config_path, processed_video_path,
     # Train the model
     try:
         detector_path = os.path.join(
-        training_folder,
+        train_folder,
         "snapshot-detector-200.pt"   
         )
         snapshot_path = os.path.join(
-        training_folder,
+        train_folder,
         "snapshot-075.pt"   
         )
         st.info("🧠 Starting model training...")
@@ -345,7 +327,7 @@ def run_retraining(config_path, processed_video_path,
                                  )
         st.success("✅ Training complete!")
         st.markdown("### 📊 Training Loss Overview")
-        show_training_plots(training_folder)
+        show_training_plots(train_folder)
     except Exception as e:
         st.error(f"❌ Failed to train the model: {e}")
         return  # Exit early if training fails
@@ -367,7 +349,7 @@ def predict_and_show_labeled_video(config_path: str, video_path: str, videos_dir
 
 def preprocess_video(input_video_path, output_video_path):
     """Preprocesses the video: removes audio, scales it to fit 1274x720, centers it, and sets 30 FPS."""
-    target_width, target_height = 1280, 720
+    target_width, target_height = 1274, 720
     cap = cv2.VideoCapture(input_video_path)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_video_path, fourcc, 30.0, (target_width, target_height))
@@ -396,39 +378,62 @@ def preprocess_video(input_video_path, output_video_path):
 
 with tab1:
     st.title("DeepLabCut Video Prediction")
+    # Validation?? accept quoted strings????
+    # Get project path from user
+    project_path = st.text_input("📁 Enter the full path to your DeepLabCut project folder:")
 
-    # Initialize project
-    if not st.session_state["project_initialized"]:
-        init_project(config_path=config_path, project_path=project_path)
-        os.makedirs(videos_dir, exist_ok=True)
-        st.session_state["project_initialized"] = True
+    if project_path and os.path.exists(os.path.join(project_path, "config.yaml")):
+        config_path = os.path.join(project_path, "config.yaml")
+        videos_dir = os.path.join(project_path, "videos")
 
-    # Upload and preprocess video
-    uploaded_video = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
-    if uploaded_video is not None and "processed_video_path" not in st.session_state:
-        original_name = Path(uploaded_video.name).stem
-        temp_input_path = os.path.join(videos_dir, uploaded_video.name)
+        # Auto-detect the training folder
+        train_folder = glob(
+            os.path.join(project_path, "dlc-models-pytorch", "iteration-0", "*", "train")
+        )
+        train_folder = train_folder[0] if train_folder else None
 
-        with open(temp_input_path, "wb") as f:
-            f.write(uploaded_video.read())
+        # Save to session state
+        st.session_state["config_path"] = config_path
+        st.session_state["project_path"] = project_path
+        st.session_state["videos_dir"] = videos_dir
+        st.session_state["training_folder"] = train_folder
 
-        processed_video_name = f"processed_{original_name}.mp4"
-        processed_video_path = os.path.join(videos_dir, processed_video_name)
+        # TODO! Write project path to yaml!
+        # Initialize project
+        if not st.session_state["project_initialized"]:
+            init_project(config_path=config_path, project_path=project_path)
+            clean_snapshots(train_folder=train_folder)
+            os.makedirs(videos_dir, exist_ok=True)
+            st.session_state["project_initialized"] = True
+        else:
+            st.warning("⬆️ Enter the project folder path to continue.")
 
-        st.write("Preprocessing video...")
-        preprocess_video(temp_input_path, processed_video_path)
-        os.remove(temp_input_path)
-        st.success("✅ Video preprocessed and saved.")
-        st.session_state["processed_video_path"] = processed_video_path
+        # Upload and preprocess video
+        uploaded_video = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
+        if uploaded_video is not None and "processed_video_path" not in st.session_state:
+            original_name = Path(uploaded_video.name).stem
+            temp_input_path = os.path.join(videos_dir, uploaded_video.name)
 
-    # Prediction and make labeled video
-    if "processed_video_path" in st.session_state:
-        if st.button("Run Prediction and Create Labeled Video"):
-            predict_and_show_labeled_video(config_path,
-                                        st.session_state["processed_video_path"],
-                                        videos_dir)
-            st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page")
-            st.markdown("### If not, move to the **Labeling/Retraining** tab:")
+            with open(temp_input_path, "wb") as f:
+                f.write(uploaded_video.read())
+
+            processed_video_name = f"processed_{original_name}.mp4"
+            processed_video_path = os.path.join(videos_dir, processed_video_name)
+
+            st.write("Preprocessing video...")
+            preprocess_video(temp_input_path, processed_video_path)
+            os.remove(temp_input_path)
+            st.success("✅ Video preprocessed and saved.")
+            st.session_state["processed_video_path"] = processed_video_path
+
+        # Prediction and make labeled video
+        if "processed_video_path" in st.session_state:
+            if st.button("Run Prediction and Create Labeled Video"):
+                predict_and_show_labeled_video(config_path,
+                                            st.session_state["processed_video_path"],
+                                            videos_dir)
+                st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page")
+                st.markdown("### If not, move to the **Labeling/Retraining** tab:")
 
 with tab2:
     if "config_path" in st.session_state and "processed_video_path" in st.session_state:
