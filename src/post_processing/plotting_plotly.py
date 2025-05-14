@@ -2,7 +2,7 @@ import warnings
 from scipy.stats import gaussian_kde
 import tempfile
 import imageio.v2 as imageio  # newer version
-from src.post_processing.validation import Validation as Val
+from src.components.validation import Validation as Val
 from src.post_processing.datadlc import DataDLC
 from src.post_processing.mergeddata import MergedData
 from src.post_processing.plotting import Plotting

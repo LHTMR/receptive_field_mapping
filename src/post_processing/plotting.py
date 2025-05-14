@@ -1,4 +1,4 @@
-from src.post_processing.validation import Validation as Val
+from src.components.validation import Validation as Val
 from src.post_processing.mergeddata import MergedData
 import cv2
 from sklearn.preprocessing import MinMaxScaler

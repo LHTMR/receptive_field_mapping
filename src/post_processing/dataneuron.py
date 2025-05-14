@@ -3,7 +3,11 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import numpy as np
-from src.post_processing.validation import Validation as Val
+from src.components.validation import Validation as Val
+
+# Quiet the warnings
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 class DataNeuron:
     def __init__(self,
@@ -51,7 +55,7 @@ class DataNeuron:
         # 1 divided by the difference between the current time and last spike time
         spikes_loc = self.df[self.df['Spikes'] == 1].index
         self.df["IFF"] = np.nan
-        
+
         for i in range(1, len(spikes_loc)):
             diff = self.df.loc[spikes_loc[i], 'Time'] - \
                    self.df.loc[spikes_loc[i-1], 'Time']
@@ -66,7 +70,7 @@ class DataNeuron:
     def _get_frequency(self) -> int:
         time_diffs = np.diff(self.df['Time'])
         # Calculate the frequency as the reciprocal of the mean time difference
-        current_freq = 1 / np.mean(time_diffs).round()
+        current_freq = int(1 / np.mean(time_diffs))
         return current_freq
 
     def fill_samples(self) -> None:
@@ -80,8 +84,11 @@ class DataNeuron:
         # Create a new DataFrame with 0s
         full_df = pd.DataFrame({'Time': full_time_range, 'Spikes': 0})
 
+        # Round the Time columns to avoid floating-point precision issues
+        full_df['Time'] = full_df['Time'].round(6)
+
         # Merge with original data, ensuring 1s are preserved
-        filled_df = full_df.merge(self.df, on='Time', how="outer", suffixes=('', '_original'))
+        filled_df = full_df.merge(self.df, on='Time', how="left", suffixes=('', '_original'))
         filled_df['Spikes'] = filled_df['Spikes' + '_original'].fillna(0).astype(int)
         filled_df = filled_df.drop(columns=['Spikes' + '_original'])
 
@@ -97,6 +104,8 @@ class DataNeuron:
                    target_freq: int) -> pd.DataFrame:
         Val.validate_type(target_freq, int, "Target Frequency")
         Val.validate_positive(target_freq, "Target Frequency")
+        if target_freq > self.original_freq:
+            raise ValueError("Target frequency must be less than or equal to the original frequency.")
 
         # Calculate the downsampling factor
         downsample_factor = int(self.original_freq / target_freq)

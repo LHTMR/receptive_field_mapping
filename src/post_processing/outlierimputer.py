@@ -1,4 +1,4 @@
-from src.post_processing.validation import Validation as Val
+from src.components.validation import Validation as Val
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.model_selection import GridSearchCV

@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import cv2
 from src.post_processing.outlierimputer import OutlierImputer
-from src.post_processing.validation import Validation as Val
+from src.components.validation import Validation as Val
 
 class DataDLC:
     # This is the initial class, reading the h5 file for DLC data, then
@@ -43,11 +43,14 @@ class DataDLC:
             )
 
     def get_avg_likelihoods(self) -> str:
-
         overall_average = self.df_likelihoods.mean().mean()
         bodypart_average = self.df_likelihoods.mean()
+
+        # Format the bodypart_average DataFrame as a string
+        bodypart_average_str = bodypart_average.to_string(index=True, header=False)
+
         return f"Overall average likelihood: \n{overall_average}\n" + \
-               f"Bodypart average likelihoods: \n{bodypart_average}"
+            f"Bodypart average likelihoods: \n{bodypart_average_str}"
 
     def assign_homography_points(self,
                                  start: int = 0,

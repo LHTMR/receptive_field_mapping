@@ -22,7 +22,7 @@ class Validation:
     @staticmethod
     def validate_type(value, expected_types, name: str):
         if not isinstance(value, expected_types):
-            raise ValueError(
+            raise TypeError(
                 f"{name} must be one of {expected_types}. Got {type(value)} instead.")
 
     @staticmethod
@@ -39,6 +39,15 @@ class Validation:
         elif not zero_allowed and value <= 0:
             raise ValueError(
                 f"{name} must be a positive number. Got {value} instead.")
+
+    @staticmethod
+    def validate_float_in_range(value, min_value: float, max_value: float, name: str):
+        if not isinstance(value, (float, int)):
+            raise ValueError(
+                f"{name} must be a float or int. Got {type(value)} instead.")
+        if value < min_value or value > max_value:
+            raise ValueError(
+                f"{name} must be between {min_value} and {max_value}. Got {value} instead.")
 
     @staticmethod
     def validate_in_list(value, valid_list, name: str):

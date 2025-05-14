@@ -1,6 +1,6 @@
 from scipy.signal import correlate
 from scipy.stats import zscore
-from src.post_processing.validation import Validation as Val
+from src.components.validation import Validation as Val
 import pandas as pd
 from src.post_processing.dataneuron import DataNeuron
 from src.post_processing.datadlc import DataDLC
@@ -20,7 +20,7 @@ class MergedData:
         Val.validate_type(max_gap_fill, int, "Max Gap Fill")
         Val.validate_positive(max_gap_fill, "Max Gap Fill")
         Val.validate_type(threshold, float, "Threshold")
-        Val.validate_positive(threshold, "Threshold")
+        Val.validate_float_in_range(threshold, 0, 1, "Threshold")
 
         self.dlc = dlc
         self.neuron = neuron
@@ -85,6 +85,7 @@ class MergedData:
         self.df_merged_cleaned = self.df_merged[
             (self.df_merged['Bending_Binary'] == 1) |
             (self.df_merged['Spikes'] != 0)]
+        return self.df_merged_cleaned
 
     def threshold_data(self,
                        bending: bool = True,
@@ -95,6 +96,9 @@ class MergedData:
         - If `spikes` is True, include rows where the Spikes column is not 0.
         - If both are False, return the unfiltered DataFrame.
         """
+        Val.validate_type(bending, bool, "Bending")
+        Val.validate_type(spikes, bool, "Spikes")
+
         if not bending and not spikes:
             # Return the unfiltered DataFrame if both conditions are False
             return self.df_merged
@@ -138,16 +142,12 @@ class MergedData:
         Val.validate_type(file_format, str, "File Format")
         Val.validate_path(path, [file_format])
 
-        try:
-            if file_format == 'csv':
-                df.to_csv(path, index=False)
-            elif file_format == 'xlsx':
-                df.to_excel(path, index=False)
-            else:
-                raise ValueError(f"Unsupported file format: {file_format}")
-            print(f"Data saved to {path}")
-        except Exception as e:
-            raise Exception(f'Error saving data to {path}: {e}')
+        if file_format == 'csv':
+            df.to_csv(path, index=False)
+        elif file_format == 'xlsx':
+            df.to_excel(path, index=False)
+        else:
+            raise ValueError(f"Unsupported file format: {file_format}")
 
     def save_full_data(self,
                        path: str,

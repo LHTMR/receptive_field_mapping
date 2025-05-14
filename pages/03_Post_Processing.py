@@ -197,11 +197,11 @@ with tab1:
         with col1:
             std_threshold_square = st.number_input(
                 "Enter the std threshold for square outlier imputation:",
-                min_value=0.1, value=4.0, step=0.1, key="std_threshold_square"
+                min_value=0.1, value=5.0, step=0.1, key="std_threshold_square"
             )
             std_threshold_filament = st.number_input(
                 "Enter the std threshold for filament outlier imputation:",
-                min_value=0.1, value=4.5, step=0.1, key="std_threshold_filament"
+                min_value=0.1, value=5.0, step=0.1, key="std_threshold_filament"
             )
         with col2:
             model_name_square = st.selectbox(
