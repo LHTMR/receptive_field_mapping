@@ -6,115 +6,11 @@ from src.post_processing.mergeddata import MergedData
 from src.post_processing.dataneuron import DataNeuron
 from src.post_processing.outlierimputer import OutlierImputer
 from src.post_processing.datadlc import DataDLC
+from src.post_processing import processing_utils
 import streamlit as st
 
-
-def get_plot_inputs(default_title="",
-                    default_x="index",
-                    default_y="value",
-                    default_color="#00f900",  # Green
-                    key_prefix=""):
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        title = st.text_input("Title (empty is valid)", value=default_title,
-                              label_visibility="visible", key=f"{key_prefix}_title")
-    with col2:
-        x_label = st.text_input("X Axis", value=default_x,
-                                label_visibility="visible", key=f"{key_prefix}_x")
-    with col3:
-        y_label = st.text_input("Y Axis", value=default_y,
-                                label_visibility="visible", key=f"{key_prefix}_y")
-    with col4:
-        color = st.color_picker("Color", default_color,
-                                label_visibility="visible", key=f"{key_prefix}_color")
-
-    return title, x_label, y_label, color
-
-
-def get_dual_y_axis_plot_inputs(default_title="",
-                                default_x="index",
-                                default_y1="value 1",
-                                default_y2="value 2",
-                                default_color1="#1f77b4",  # Blue
-                                default_color2="#d62728",  # Red
-                                key_prefix=""):
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-
-    with col1:
-        title = st.text_input("Title", value=default_title,
-                              label_visibility="visible", key=f"{key_prefix}_title")
-    with col2:
-        x_label = st.text_input("X Axis", value=default_x,
-                                label_visibility="visible", key=f"{key_prefix}_x")
-    with col3:
-        y_label_1 = st.text_input("Y Axis 1", value=default_y1,
-                                  label_visibility="visible", key=f"{key_prefix}_y1")
-    with col4:
-        y_label_2 = st.text_input("Y Axis 2", value=default_y2,
-                                  label_visibility="visible", key=f"{key_prefix}_y2")
-    with col5:
-        color_1 = st.color_picker("Color 1", default_color1,
-                                  label_visibility="visible", key=f"{key_prefix}_color1")
-    with col6:
-        color_2 = st.color_picker("Color 2", default_color2,
-                                  label_visibility="visible", key=f"{key_prefix}_color2")
-    with col7:
-        # button to invert the secondary y axis for clearer visibility
-        invert_y = st.checkbox("Invert Y Axis 2", value=False,
-                               label_visibility="visible", key=f"{key_prefix}_invert_y")
-
-    return title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y
-
-
-def get_all_plotly_cmaps():
-    cmap_dict = {}
-    for cmap_group in [px.colors.sequential, px.colors.diverging, px.colors.cyclical, px.colors.qualitative]:
-        for name in dir(cmap_group):
-            if not name.startswith('_'):
-                cmap_dict[name] = getattr(cmap_group, name)
-    return cmap_dict
-
-
-plotly_cmaps = get_all_plotly_cmaps()
-
-
-def get_all_matplotlib_cmaps():
-    import matplotlib.cm as cm
-    cmap_dict = {}
-    for name in dir(cm):
-        if not name.startswith('_'):
-            cmap_dict[name] = getattr(cm, name)
-    return cmap_dict
-
-
-matplotlib_cmaps = get_all_matplotlib_cmaps()
-
-
-def get_temp_video_path(video_file, session_key="labeled_video_path"):
-    if session_key in st.session_state:
-        return st.session_state[session_key]
-
-    # Create a temporary file and store its path in session_state
-    with NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video_file:
-        temp_video_file.write(video_file.read())
-        st.session_state[session_key] = temp_video_file.name
-
-    return st.session_state[session_key]
-
-
-def assign_video_path(key="get_video_key"):
-    # Optional input for video path, just mark as success if it's already in session state
-    if "labeled_video_path" in st.session_state:
-        st.success("Labeled video path already in session state!")
-    else:
-        video_file = st.file_uploader(
-            "Upload Labeled Video File", type=["mp4", "avi"], key=key)
-        if video_file is not None:
-            st.session_state["labeled_video_path"] = get_temp_video_path(
-                video_file, session_key="labeled_video_path")
-            st.success("Labeled video path assigned successfully!")
-
+plotly_cmaps = processing_utils.get_all_plotly_cmaps()
+matplotlib_cmaps = processing_utils.get_all_matplotlib_cmaps()
 
 st.title("Post Processing")
 st.write("This page is for post processing the prediction results together with recorded neuron data.")
@@ -135,7 +31,8 @@ with tab1:
     else:
         # File uploader for DLC data
         dlc_file = st.file_uploader(
-            "Upload DLC Data H5 file that was predicted from the video", type=["h5"])
+            "Upload DLC Data H5 file that was predicted from the video",
+            type=["h5"])
         # Initialize data_dlc in session state if not already present
         if "data_dlc" not in st.session_state:
             st.session_state.data_dlc = None
@@ -187,9 +84,11 @@ with tab1:
         if "imputed_filament" not in st.session_state:
             st.session_state.imputed_filament = False
         if "last_square_params" not in st.session_state:
-            st.session_state.last_square_params = {"std_threshold": None, "model_name": None}
+            st.session_state.last_square_params = {"std_threshold": None,
+                                                   "model_name": None}
         if "last_filament_params" not in st.session_state:
-            st.session_state.last_filament_params = {"std_threshold": None, "model_name": None}
+            st.session_state.last_filament_params = {"std_threshold": None,
+                                                     "model_name": None}
 
         # Get user inputs for std_threshold and model_name
         col1, col2 = st.columns(2)
@@ -208,14 +107,15 @@ with tab1:
                 options=["All Models"] + list(OutlierImputer.models.keys()),
                 index=6, key="model_name_square"
             )
-            model_name_square = None if model_name_square == "All Models" else model_name_square
+            model_name_square = None if model_name_square == "All Models"else model_name_square
 
             model_name_filament = st.selectbox(
                 "Select the model for filament outlier imputation:",
                 options=["All Models"] + list(OutlierImputer.models.keys()),
                 index=6, key="model_name_filament"
             )
-            model_name_filament = None if model_name_filament == "All Models" else model_name_filament
+            model_name_filament = None if model_name_filament == "All Models"\
+                else model_name_filament
 
         # Reset imputation flags if parameters have changed
         if (st.session_state.last_square_params["std_threshold"] != std_threshold_square or
@@ -307,7 +207,7 @@ with tab1:
         with st.expander("Plotting", expanded=False):
             try:
                 # Get customization inputs for the plot
-                title, x_label, y_label, color = get_plot_inputs(
+                title, x_label, y_label, color = processing_utils.get_plot_inputs(
                     default_title="",
                     default_x="Frame",
                     default_y="Bending Value",
@@ -361,7 +261,7 @@ with tab1:
         with st.expander("Plotting animations", expanded=False):
             st.write("(Below inputs for both interactive and video)")
             # Get customization inputs for the plot
-            title, x_label, y_label, color = get_plot_inputs(
+            title, x_label, y_label, color = processing_utils.get_plot_inputs(
                 default_title="Homography Plot",
                 default_x="x (mm)",
                 default_y="y (mm)",
@@ -419,7 +319,6 @@ with tab1:
                 except Exception as e:
                     st.error(f"Error creating homography video: {e}")
 
-
 # Tab for processing neuron data
 with tab2:
     st.header("Upload Files & Inputs")
@@ -472,7 +371,7 @@ with tab2:
         with st.expander("Plotting", expanded=False):
             # Get customization inputs for the plot
             title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y_2 = \
-                get_dual_y_axis_plot_inputs(
+                processing_utils.get_dual_y_axis_plot_inputs(
                     default_title="Neuron Data, Original Sample Rate",
                     default_x="index",
                     default_y1="neuron spikes",
@@ -513,7 +412,7 @@ with tab2:
         with st.expander("Plotting", expanded=False):
             # Get customization inputs for the plot
             title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y_2 = \
-                get_dual_y_axis_plot_inputs(
+                processing_utils.get_dual_y_axis_plot_inputs(
                     default_title="Neuron Data, Downsampled",
                     default_x="index",
                     default_y1="Neuron Spikes",
@@ -604,7 +503,7 @@ with tab3:
         with st.expander("Plotting", expanded=False):
             # Get customization inputs for the plot
             title, x_label, y_label_1, y_label_2, color_1, color_2, invert_y_2 = \
-                get_dual_y_axis_plot_inputs(
+                processing_utils.get_dual_y_axis_plot_inputs(
                     default_title="Merged Data",
                     default_x="index",
                     default_y1="Neuron Spikes (filled)",
@@ -798,7 +697,7 @@ with tab3:
                 inputs if they're not restated.
                 """)
             # get video file to get frame for background
-            assign_video_path(key="kde_scatter_video_key")
+            processing_utils.assign_video_path(key="kde_scatter_video_key")
 
             if "labeled_video_path" in st.session_state:
 
@@ -873,7 +772,7 @@ with tab3:
             if it is one of the target columns.
             """)
         with st.expander("Scrolling Video Inputs", expanded=False):
-            assign_video_path(key="scrolling_video_key")
+            processing_utils.assign_video_path(key="scrolling_video_key")
 
             if "labeled_video_path" in st.session_state:
 
