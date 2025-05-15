@@ -5,7 +5,6 @@ import imageio.v2 as imageio  # newer version
 from src.components.validation import Validation as Val
 from src.post_processing.datadlc import DataDLC
 from src.post_processing.mergeddata import MergedData
-from src.post_processing.plotting import Plotting
 import cv2
 from sklearn.preprocessing import MinMaxScaler
 from matplotlib.lines import Line2D
@@ -26,7 +25,15 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-class PlottingPlotly(Plotting):
+class PlottingPlotly():
+    @staticmethod
+    def _get_lim(homography_points: np.ndarray = None) -> tuple[int, int]:
+        Val.validate_array_int_float(homography_points,
+                                     shape=(4, 2),
+                                     name="Homography Points")
+        diff = (homography_points.max() - homography_points.min())/2
+        return homography_points.min() - diff, homography_points.max() + diff
+
     @staticmethod
     def plot_dual_y_axis(df: pd.DataFrame,
                          columns: list[str],
@@ -183,7 +190,6 @@ class PlottingPlotly(Plotting):
         # Return the video as bytes
         with open(temp_path, "rb") as f:
             return f.read()
-        
 
     @staticmethod
     def generate_homography_video(homography_points: np.ndarray,
@@ -487,7 +493,7 @@ class PlottingPlotly(Plotting):
         return xx, yy, zz
 
     @staticmethod
-    def plot_kde_density(merged_data: MergedData,
+    def plot_kde_density_interactive(merged_data: MergedData,
                          x_col: str, y_col: str,
                          homography_points: np.ndarray,
                          bending: bool = False,
@@ -614,7 +620,7 @@ class PlottingPlotly(Plotting):
         return fig
 
     @staticmethod
-    def plot_scatter(merged_data: MergedData,
+    def plot_scatter_interactive(merged_data: MergedData,
                      x_col: str, y_col: str,
                      homography_points: np.ndarray,
                      size_col: str,
@@ -699,6 +705,184 @@ class PlottingPlotly(Plotting):
             )
         )
         return fig
+
+    @staticmethod
+    def background_framing(merged_data: MergedData,
+                           ax: plt.Axes,
+                           homography_points: np.ndarray,
+                           video_path: str = None,
+                           index: int = None):
+        Val.validate_array(homography_points, shape=(4, 2),
+                           name="Homography Points")
+        if video_path is not None and index is not None:
+            Val.validate_path(video_path, file_types=[".mp4", ".avi"])
+            Val.validate_type(index, int, "Index")
+            Val.validate_positive(index, "Index", zero_allowed=True)
+
+            dst_min, dst_max = 300, 500
+            dst_points = np.array([[dst_min, dst_max],
+                                   [dst_max, dst_max],
+                                   [dst_max, dst_min],
+                                   [dst_min, dst_min]])
+            h_matrix = merged_data.dlc._get_homography_matrix(
+                index, dst_points)
+
+            cap = cv2.VideoCapture(video_path)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, index)
+            ret, frame = cap.read()
+            cap.release()
+
+            if not ret:
+                print("Error: Could not read video frame.")
+                return
+
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            h, w, _ = frame.shape
+            frame_transformed = cv2.warpPerspective(frame, h_matrix, (w, h))
+
+            pixel_to_mm = 0.1
+            frame_width_mm = w * pixel_to_mm
+            frame_height_mm = h * pixel_to_mm
+            offset_x_mm = -30
+            offset_y_mm = -30
+
+            extent = [offset_x_mm,
+                      offset_x_mm + frame_width_mm,
+                      offset_y_mm + frame_height_mm,
+                      offset_y_mm]
+            ax.imshow(frame_transformed, extent=extent)
+
+        for point in homography_points:
+            ax.axhline(y=point[1], color='gray', linestyle='--', alpha=0.5)
+            ax.axvline(x=point[0], color='gray', linestyle='--', alpha=0.5)
+
+    @staticmethod
+    def plot_kde_density(merged_data: MergedData,
+                         x_col: str, y_col: str,
+                         homography_points: np.ndarray,
+                         bending: bool = False,
+                         spikes: bool = False,
+                         title: str = 'KDE Plot',
+                         xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
+                         figsize: tuple[int] = (12, 12),
+                         cmap="vlag",
+                         # Video frame options
+                         frame: bool = False,
+                         video_path: str = None,
+                         index: int = None):
+
+        Val.validate_type(merged_data, MergedData, "MergedData")
+        Val.validate_array(homography_points, shape=(4, 2),
+                           name="Homography Points")
+        Val.validate_strings(x_col=x_col, y_col=y_col,
+                             xlabel=xlabel, ylabel=ylabel, title=title,
+                             cmap=cmap)
+        Val.validate_type(bending, bool, "Bending")
+        Val.validate_type(spikes, bool, "Spikes")
+
+        fig, ax = plt.subplots(figsize=figsize)
+        Plotting.background_framing(
+            merged_data, ax, homography_points, video_path if frame else None, index if frame else None)
+
+        df = merged_data.threshold_data(bending, spikes)
+
+        sns.kdeplot(x=df[x_col], y=df[y_col],
+                    fill=True, cmap=cmap, bw_adjust=0.3, ax=ax, alpha=0.5)
+
+        ax.set_xlim(Plotting._get_lim(homography_points))
+        ax.set_ylim(Plotting._get_lim(homography_points))
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        plt.show()
+        return fig, ax
+
+    @staticmethod
+    def plot_scatter(merged_data: MergedData,
+                     x_col: str, y_col: str,
+                     homography_points: np.ndarray,
+                     size_col: str,
+                     color_col: str = None,  # New parameter for color mapping
+                     bending: bool = False,
+                     spikes: bool = False,
+                     title: str = 'Scatter Plot',
+                     legend_title: str = 'Neuron Spike Status',
+                     xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
+                     figsize: tuple[int] = (12, 12),
+                     cmap: str = 'viridis',
+                     # Video frame options
+                     frame: bool = False,
+                     video_path: str = None,
+                     index: int = None):
+
+        Val.validate_type(merged_data, MergedData, "MergedData")
+        Val.validate_array(homography_points, shape=(4, 2),
+                           name="Homography Points")
+        Val.validate_strings(x_col=x_col, y_col=y_col,
+                             size_col=size_col, color_col=color_col,
+                             xlabel=xlabel, ylabel=ylabel,
+                             title=title, legend_title=legend_title,
+                             cmap=cmap)
+        Val.validate_type(bending, bool, "Bending")
+        Val.validate_type(spikes, bool, "Spikes")
+
+        fig, ax = plt.subplots(figsize=figsize)
+        Plotting.background_framing(
+            merged_data, ax, homography_points, video_path if frame else None, index if frame else None)
+
+        df = merged_data.threshold_data(bending, spikes)
+
+        # Normalize sizes
+        norm = plt.Normalize(df[size_col].min(), df[size_col].max())
+        sizes = norm(df[size_col]) * 200
+
+        # Handle colors
+        if color_col == 'Spikes':
+            colors = df['Spikes'].apply(lambda x: 'blue' if x > 0 else 'grey')
+        else:
+            color_norm = plt.Normalize(
+                df[color_col].min(), df[color_col].max())
+            colors = plt.cm.get_cmap(cmap)(color_norm(df[color_col]))
+
+        # Scatter plot
+        scatter = ax.scatter(df[x_col], df[y_col],
+                             c=colors, s=sizes,
+                             alpha=0.5, edgecolors=None, linewidth=0.5)
+
+        # Add legend
+        if color_col == 'Spikes':
+            legend_elements = [
+                Line2D([0], [0], marker='o', color='w',
+                       markerfacecolor='blue', markersize=10, label='Spike'),
+                Line2D([0], [0], marker='o', color='w',
+                       markerfacecolor='grey', markersize=10, label='No Spike')
+            ]
+            ax.legend(handles=legend_elements,
+                      loc="upper left",
+                      title=f"{legend_title}\n(Circle Size ∝ {size_col})")
+        else:
+            cbar = fig.colorbar(scatter, ax=ax)
+            cbar.set_label(f'{color_col} (Color)')
+
+            # Add a small text box for size correlation
+            text_box = f"Circle Size ∝ {size_col}"
+            ax.text(0.02, 0.98,
+                    text_box,
+                    transform=ax.transAxes,
+                    fontsize=12,
+                    verticalalignment='top',
+                    bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
+
+        # Set axis limits and labels
+        ax.set_xlim(Plotting._get_lim(homography_points))
+        ax.set_ylim(Plotting._get_lim(homography_points))
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        plt.show()
+        return fig, ax
 
     @staticmethod
     def generate_scroll_over_video(merged_data: MergedData,
