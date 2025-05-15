@@ -10,6 +10,31 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 class DataNeuron:
+    """
+    A class for handling neuron data, processing spike and time information, 
+    and performing operations such as frequency adjustment, spike filling, and IFF calculation.
+
+    This class processes neuron data from an Excel file, validates the required columns, and ensures
+    that the data is in a consistent format. It handles various tasks such as:
+        - Ensuring the data has valid columns (`Time`, `Spikes`, `Neuron`, `IFF`, etc.)
+        - Adjusting the frequency of the data if necessary
+        - Calculating Instantaneous Frequency Firing (IFF)
+        - Downsampling the data to a desired frequency
+        - Filling missing samples when needed
+
+    Attributes:
+        df (pd.DataFrame): The DataFrame containing the neuron data, including 'Time', 'Spikes', and optional columns like 'IFF'.
+        original_freq (int): The original frequency of the neuron data.
+        downsampled_df (pd.DataFrame): The downsampled DataFrame, created if downsampling is required.
+
+    Args:
+        xclc_path (str): Path to the Excel file containing neuron data.
+        original_freq (int): The original frequency of the data.
+
+    Raises:
+        ValueError: If the provided frequency is not a positive integer or if the required columns are not present in the file.
+        FileNotFoundError: If the file path does not exist.
+    """
     def __init__(self,
                  xclc_path: str,
                  original_freq: int) -> None:
@@ -50,7 +75,19 @@ class DataNeuron:
             self.calculate_iff()
 
     def calculate_iff(self) -> None:
+        """
+        Calculate the Instantaneous Frequency Firing (IFF) for the spike data.
 
+        The IFF is computed as 1 divided by the difference between the current spike's 
+        time and the previous spike's time. The IFF is stored in a new column 'IFF' in 
+        the dataframe. Any missing IFF values are forward-filled, with any remaining 
+        missing values being filled with zero.
+
+        This method modifies the dataframe in place by adding the 'IFF' column.
+
+        Returns:
+            None: The function directly modifies the dataframe without returning anything.
+        """
         # Create Instantaneous Frequency Firing (IFF):
         # 1 divided by the difference between the current time and last spike time
         spikes_loc = self.df[self.df['Spikes'] == 1].index
@@ -68,13 +105,36 @@ class DataNeuron:
         self.df["IFF"].fillna(0, inplace=True)
 
     def _get_frequency(self) -> int:
+        """
+        Calculate the frequency of events based on the time differences between spikes.
+
+        The frequency is calculated as the reciprocal of the mean time difference 
+        between consecutive spikes. This method provides an estimate of the event 
+        frequency in Hz (spikes per second).
+
+        Returns:
+            int: The calculated frequency based on the mean time difference between spikes.
+        """
         time_diffs = np.diff(self.df['Time'])
         # Calculate the frequency as the reciprocal of the mean time difference
         current_freq = int(1 / np.mean(time_diffs))
         return current_freq
 
     def fill_samples(self) -> None:
+        """
+        Fill missing sample data by generating a complete range of timestamps.
 
+        This method creates a time series with a consistent interval based on the 
+        original frequency, and fills in the missing spike data. The `Time` column 
+        is rounded to six decimal places to avoid floating-point precision issues. 
+        The method also ensures that missing 'IFF' values are propagated forward, 
+        filling in any gaps.
+
+        The resulting DataFrame is updated with the filled spike data and IFF values.
+
+        Returns:
+            None: The method modifies the DataFrame in place.
+        """
         interval = 1 / self.original_freq  # Compute time step based on frequency
         min_time, max_time = 0, self.df['Time'].max()
 
@@ -102,6 +162,25 @@ class DataNeuron:
 
     def downsample(self,
                    target_freq: int) -> pd.DataFrame:
+        """
+        Downsample the data to a lower frequency.
+
+        This method reduces the frequency of the 'Spikes' and 'IFF' columns by applying 
+        a rolling window technique. The 'Spikes' column is downsampled by summing values 
+        within the window, while the 'IFF' column is downsampled by taking the maximum value 
+        within the window. The DataFrame is then reduced by selecting every `downsample_factor`-th row.
+
+        Args:
+            target_freq (int): The target frequency to downsample the data to. It must be less than or 
+                                equal to the original frequency.
+
+        Returns:
+            pd.DataFrame: The downsampled DataFrame containing the 'Spikes' and 'IFF' columns at the 
+                        specified target frequency.
+        
+        Raises:
+            ValueError: If the target frequency is greater than the original frequency.
+        """
         Val.validate_type(target_freq, int, "Target Frequency")
         Val.validate_positive(target_freq, "Target Frequency")
         if target_freq > self.original_freq:
@@ -136,6 +215,22 @@ class DataNeuron:
     #! Might not be needed, but keeping for now
     def _fill_downsample_length(self,
                                 target_length: int) -> pd.DataFrame:
+        """
+        Fill the downsampled DataFrame to a specified length.
+
+        This method ensures that the downsampled DataFrame has the desired number of rows, 
+        by forward filling missing values in the 'IFF' column and filling missing 'Spikes' values with 0.
+
+        Args:
+            target_length (int): The target length to which the DataFrame should be filled.
+
+        Returns:
+            pd.DataFrame: The downsampled DataFrame, now extended to the specified length 
+                        with forward-filled 'IFF' values and 'Spikes' values set to 0 where necessary.
+        
+        Raises:
+            ValueError: If the target length is not a positive integer.
+        """
         Val.validate_type(target_length, int, "Target Length")
         Val.validate_positive(target_length, "Target Length")
 

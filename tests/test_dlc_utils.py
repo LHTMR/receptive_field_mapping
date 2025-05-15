@@ -118,7 +118,6 @@ class TestDLCUtils(unittest.TestCase):
         result = dlc_utils.save_h5_to_session("/fake/videos")
         self.assertIsNone(result)
         mock_st.error.assert_called_once()
-
 ########################################################################
     @patch("src.train_predict.dlc_utils.st")
     def test_update_numframes2pick_when_different(self, mock_st):
