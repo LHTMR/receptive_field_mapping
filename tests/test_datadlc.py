@@ -262,5 +262,6 @@ class TestDataDLC(unittest.TestCase):
         pd.testing.assert_frame_equal(merged_df, expected_df)
         self.assertEqual(self.data_dlc.df_merged.shape, (2, 7))
 
+
 if __name__ == "__main__":
     unittest.main()

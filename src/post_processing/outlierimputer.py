@@ -56,11 +56,13 @@ class OutlierImputer:
     @staticmethod
     def transform_to_derivative(df: pd.DataFrame) -> pd.DataFrame:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
+        Val.validate_dataframe_numeric(df, "DataFrame")
         if df.shape[1] % 2 != 0:
-            raise ValueError("The DataFrame must have an even number of columns (x and y pairs).")
+            raise ValueError(
+                "The DataFrame must have an even number of columns (x and y pairs).")
 
         derivative_df = df.diff().abs()
-        derivative_df.iloc[0, :] = 0
+        derivative_df.iloc[0, :] = 0 # Set the first row to 0
         return derivative_df
 
     def detect_outliers_velocity(self, df: pd.DataFrame, threshold: int | float = 2.0) -> pd.DataFrame:
@@ -70,7 +72,8 @@ class OutlierImputer:
 
         df_velocity = self.transform_to_derivative(df.copy())
         mean, std = df_velocity.mean(), df_velocity.std()
-        outlier_mask = (df_velocity < (mean - threshold * std)) | (df_velocity > (mean + threshold * std))
+        outlier_mask = (df_velocity < (mean - threshold * std)
+                        ) | (df_velocity > (mean + threshold * std))
         outlier_mask.iloc[0, :] = False
         outlier_mask |= (df_velocity > 50)
         df[outlier_mask] = np.nan
@@ -81,7 +84,8 @@ class OutlierImputer:
         if model_name:
             Val.validate_type(model_name, str, "Model Name")
             if model_name not in self.models:
-                raise ValueError(f"Invalid model name '{model_name}'. Available models: {list(self.models.keys())}")
+                raise ValueError(
+                    f"Invalid model name '{model_name}'. Available models: {list(self.models.keys())}")
 
         self.best_models = {}
         for target_col in df.columns:
@@ -93,30 +97,23 @@ class OutlierImputer:
             X_train = train_df.drop(columns=[target_col])
             y_train = train_df[target_col]
 
-            models_to_try = {model_name: self.models[model_name]} if model_name else self.models
+            models_to_try = {
+                model_name: self.models[model_name]} if model_name else self.models
             best_model, best_score = None, float("inf")
 
             for name, model in models_to_try.items():
                 param_grid = self.param_grids.get(name, {})
-                try:
-                    grid = GridSearchCV(model,
-                                        param_grid,
-                                        scoring="neg_mean_squared_error",
-                                        cv=3)
-                    grid.fit(X_train, y_train)
-                    mse = -grid.best_score_
-                    if mse < best_score:
-                        best_score, best_model = mse, grid.best_estimator_
-                except:
-                    continue
 
-            self.best_models[target_col] = best_model if best_model else None
+                grid = GridSearchCV(model,
+                                    param_grid,
+                                    scoring="neg_mean_squared_error",
+                                    cv=3)
+                grid.fit(X_train, y_train)
+                mse = -grid.best_score_
+                if mse < best_score:
+                    best_score, best_model = mse, grid.best_estimator_
 
-        if not any(self.best_models.values()):
-            for col in df.columns:
-                self.best_models[col] = [RandomForestRegressor(n_estimators=100),
-                                         HistGradientBoostingRegressor(),
-                                         KNeighborsRegressor(n_neighbors=10)]
+            self.best_models[target_col] = best_model
 
     def iterative_imputation(self, df: pd.DataFrame, max_iter=1000) -> pd.DataFrame:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
@@ -143,6 +140,7 @@ class OutlierImputer:
         df_copy = self.iterative_imputation(df_copy)
 
         with open(self.log_file, "w") as f:
-            json.dump({col: str(model) for col, model in self.best_models.items()}, f, indent=4)
+            json.dump({col: str(model)
+                      for col, model in self.best_models.items()}, f, indent=4)
 
         return df_copy

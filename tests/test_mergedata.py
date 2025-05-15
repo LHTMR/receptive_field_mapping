@@ -7,6 +7,7 @@ from src.post_processing.datadlc import DataDLC
 from src.post_processing.dataneuron import DataNeuron
 from parameterized import parameterized
 
+
 class TestMergedData(unittest.TestCase):
     def setUp(self):
         # Mock DataDLC
@@ -61,7 +62,8 @@ class TestMergedData(unittest.TestCase):
     ])
     def test_invalid_init(self, name, dlc, neuron, max_gap_fill, threshold, expected_exception):
         with self.assertRaises(expected_exception):
-            MergedData(dlc=dlc, neuron=neuron, max_gap_fill=max_gap_fill, threshold=threshold)
+            MergedData(dlc=dlc, neuron=neuron,
+                       max_gap_fill=max_gap_fill, threshold=threshold)
 
     def test_merge(self):
         # Test the _merge method
@@ -123,32 +125,42 @@ class TestMergedData(unittest.TestCase):
     @patch('src.post_processing.mergeddata.MergedData._save_data')
     def test_save_full_data_csv(self, mock_save_data):
         # Test the save_full_data method
-        self.merged_data.save_full_data(path="mock_path.csv", file_format="csv")
-        mock_save_data.assert_called_once_with(self.merged_data.df_merged, "mock_path.csv", "csv")
+        self.merged_data.save_full_data(
+            path="mock_path.csv", file_format="csv")
+        mock_save_data.assert_called_once_with(
+            self.merged_data.df_merged, "mock_path.csv", "csv")
 
     @patch('src.post_processing.mergeddata.MergedData._save_data')
     def test_save_full_data_xlsx(self, mock_save_data):
         # Test the save_full_data method
-        self.merged_data.save_full_data(path="mock_path.xlsx", file_format="xlsx")
-        mock_save_data.assert_called_once_with(self.merged_data.df_merged, "mock_path.xlsx", "xlsx")
+        self.merged_data.save_full_data(
+            path="mock_path.xlsx", file_format="xlsx")
+        mock_save_data.assert_called_once_with(
+            self.merged_data.df_merged, "mock_path.xlsx", "xlsx")
 
     @patch('src.post_processing.mergeddata.MergedData._save_data')
     def test_save_cleaned_data_csv(self, mock_save_data):
         # Test the save_cleaned_data method
-        self.merged_data.save_cleaned_data(path="mock_path.csv", file_format="csv")
-        mock_save_data.assert_called_once_with(self.merged_data.df_merged_cleaned, "mock_path.csv", "csv")
+        self.merged_data.save_cleaned_data(
+            path="mock_path.csv", file_format="csv")
+        mock_save_data.assert_called_once_with(
+            self.merged_data.df_merged_cleaned, "mock_path.csv", "csv")
 
     @patch('src.post_processing.mergeddata.MergedData._save_data')
     def test_save_cleaned_data_xlsx(self, mock_save_data):
         # Test the save_cleaned_data method
-        self.merged_data.save_cleaned_data(path="mock_path.xlsx", file_format="xlsx")
-        mock_save_data.assert_called_once_with(self.merged_data.df_merged_cleaned, "mock_path.xlsx", "xlsx")
+        self.merged_data.save_cleaned_data(
+            path="mock_path.xlsx", file_format="xlsx")
+        mock_save_data.assert_called_once_with(
+            self.merged_data.df_merged_cleaned, "mock_path.xlsx", "xlsx")
 
     @parameterized.expand([
         ("invalid_df_type", "not_a_dataframe", "mock_path.csv", "csv", TypeError),
         ("invalid_path_type", pd.DataFrame(), 123, "csv", TypeError),
-        ("invalid_file_format_type", pd.DataFrame(), "mock_path.csv", 123, TypeError),
-        ("unsupported_file_format", pd.DataFrame(), "mock_path.txt", "txt", ValueError),
+        ("invalid_file_format_type", pd.DataFrame(),
+         "mock_path.csv", 123, TypeError),
+        ("unsupported_file_format", pd.DataFrame(),
+         "mock_path.txt", "txt", ValueError),
     ])
     def test_save_data_invalid_inputs(self, name, df, path, file_format, expected_exception):
         with self.assertRaises(expected_exception):

@@ -119,5 +119,6 @@ class TestDataNeuron(unittest.TestCase):
         self.assertTrue(np.all(filled_df["IFF"].iloc[len_df:] == last_iff))
         self.assertTrue(np.all(filled_df["Spikes"].iloc[len_df:] == 0))
 
+
 if __name__ == "__main__":
     unittest.main()

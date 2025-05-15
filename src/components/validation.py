@@ -114,3 +114,10 @@ class Validation:
                 raise ValueError(
                     f"{name} is missing required columns matching any of: {missing_columns}")
         return column_mapping
+
+    @staticmethod
+    def validate_dataframe_numeric(df: pd.DataFrame, name: str = "DataFrame"):
+        if df.empty:
+            raise ValueError(f"{name} must not be empty.")
+        if not all(pd.api.types.is_numeric_dtype(df[col]) for col in df.columns):
+            raise ValueError(f"All columns in {name} must contain numeric values.")
