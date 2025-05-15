@@ -1,7 +1,6 @@
 import plotly.express as px
 from tempfile import NamedTemporaryFile
 import pandas as pd
-from src.post_processing.plotting import Plotting
 from src.post_processing.plotting_plotly import PlottingPlotly
 from src.post_processing.mergeddata import MergedData
 from src.post_processing.dataneuron import DataNeuron
@@ -658,7 +657,7 @@ with tab3:
 
             if st.checkbox("Show KDE Density (interactive)"):
                 try:
-                    fig_kde = PlottingPlotly.plot_kde_density(
+                    fig_kde = PlottingPlotly.plot_kde_density_interactive(
                         st.session_state.merged_data,
                         x_col="tf_FB2_x",
                         y_col="tf_FB2_y",
@@ -676,7 +675,7 @@ with tab3:
 
             if st.checkbox("Show Scatter Plot (interactive)"):
                 try:
-                    fig_scatter = PlottingPlotly.plot_scatter(
+                    fig_scatter = PlottingPlotly.plot_scatter_interactive(
                         st.session_state.merged_data,
                         x_col="tf_FB2_x",
                         y_col="tf_FB2_y",
@@ -724,7 +723,7 @@ with tab3:
 
                 if st.checkbox("Show KDE Plot (background frame)"):
                     try:
-                        fig, ax = Plotting.plot_kde_density(
+                        fig, ax = PlottingPlotly.plot_kde_density(
                             merged_data=st.session_state.merged_data,
                             x_col="tf_FB2_x",
                             y_col="tf_FB2_y",
@@ -744,7 +743,7 @@ with tab3:
 
                 if st.checkbox("Show Scatter Plot (background frame)"):
                     try:
-                        fig, ax = Plotting.plot_scatter(
+                        fig, ax = PlottingPlotly.plot_scatter(
                             merged_data=st.session_state.merged_data,
                             x_col="tf_FB2_x",
                             y_col="tf_FB2_y",
