@@ -12,7 +12,6 @@ from matplotlib.animation import FuncAnimation
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -211,8 +210,8 @@ class PlottingPlotly():
         Val.validate_type(figsize, tuple, "Figure Size")
 
         fig, ax = plt.subplots(figsize=figsize)
-        ax.set_xlim(Plotting._get_lim(homography_points))
-        ax.set_ylim(Plotting._get_lim(homography_points))
+        ax.set_xlim(PlottingPlotly._get_lim(homography_points))
+        ax.set_ylim(PlottingPlotly._get_lim(homography_points))
         ax.set_title(title)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
@@ -283,10 +282,10 @@ class PlottingPlotly():
             title=title,
             title_x=0.5,
             xaxis=dict(title=x_label,
-                       range=Plotting._get_lim(homography_points),
+                       range=PlottingPlotly._get_lim(homography_points),
                        showgrid=False, zeroline=False),
             yaxis=dict(title=y_label,
-                       range=Plotting._get_lim(homography_points),
+                       range=PlottingPlotly._get_lim(homography_points),
                        showgrid=False, zeroline=False),
             updatemenus=[dict(
                 type='buttons',
@@ -339,12 +338,12 @@ class PlottingPlotly():
         for pt in homography_points:
             fig.add_shape(type="line",
                           x0=pt[0], x1=pt[0],
-                          y0=Plotting._get_lim(homography_points)[0],
-                          y1=Plotting._get_lim(homography_points)[1],
+                          y0=PlottingPlotly._get_lim(homography_points)[0],
+                          y1=PlottingPlotly._get_lim(homography_points)[1],
                           line=dict(dash="dash", color="gray", width=1))
             fig.add_shape(type="line",
-                          x0=Plotting._get_lim(homography_points)[0],
-                          x1=Plotting._get_lim(homography_points)[1],
+                          x0=PlottingPlotly._get_lim(homography_points)[0],
+                          x1=PlottingPlotly._get_lim(homography_points)[1],
                           y0=pt[1], y1=pt[1],
                           line=dict(dash="dash", color="gray", width=1))
 
@@ -410,8 +409,8 @@ class PlottingPlotly():
         # Inside loop
         for frame_idx in range(len(df)):
             fig, ax = plt.subplots(figsize=figsize)
-            ax.set_xlim(Plotting._get_lim(homography_points))
-            ax.set_ylim(Plotting._get_lim(homography_points))
+            ax.set_xlim(PlottingPlotly._get_lim(homography_points))
+            ax.set_ylim(PlottingPlotly._get_lim(homography_points))
             ax.set_title(title)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
@@ -535,8 +534,8 @@ class PlottingPlotly():
         Val.validate_type(spikes, bool, "Spikes")
 
         # KDE 2D grid limits
-        xmin, xmax = Plotting._get_lim(homography_points)
-        ymin, ymax = Plotting._get_lim(homography_points)
+        xmin, xmax = PlottingPlotly._get_lim(homography_points)
+        ymin, ymax = PlottingPlotly._get_lim(homography_points)
         grid_limits = (xmin, xmax, ymin, ymax)
 
         # Determine opacity based on conditions
@@ -683,8 +682,8 @@ class PlottingPlotly():
         ))
 
         # Set axis limits
-        xmin, xmax = Plotting._get_lim(homography_points)
-        ymin, ymax = Plotting._get_lim(homography_points)
+        xmin, xmax = PlottingPlotly._get_lim(homography_points)
+        ymin, ymax = PlottingPlotly._get_lim(homography_points)
         fig.update_layout(
             xaxis_range=[xmin, xmax],
             yaxis_range=[ymin, ymax],
@@ -781,7 +780,7 @@ class PlottingPlotly():
         Val.validate_type(spikes, bool, "Spikes")
 
         fig, ax = plt.subplots(figsize=figsize)
-        Plotting.background_framing(
+        PlottingPlotly.background_framing(
             merged_data, ax, homography_points, video_path if frame else None, index if frame else None)
 
         df = merged_data.threshold_data(bending, spikes)
@@ -789,8 +788,8 @@ class PlottingPlotly():
         sns.kdeplot(x=df[x_col], y=df[y_col],
                     fill=True, cmap=cmap, bw_adjust=0.3, ax=ax, alpha=0.5)
 
-        ax.set_xlim(Plotting._get_lim(homography_points))
-        ax.set_ylim(Plotting._get_lim(homography_points))
+        ax.set_xlim(PlottingPlotly._get_lim(homography_points))
+        ax.set_ylim(PlottingPlotly._get_lim(homography_points))
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
@@ -828,7 +827,7 @@ class PlottingPlotly():
         Val.validate_type(spikes, bool, "Spikes")
 
         fig, ax = plt.subplots(figsize=figsize)
-        Plotting.background_framing(
+        PlottingPlotly.background_framing(
             merged_data, ax, homography_points, video_path if frame else None, index if frame else None)
 
         df = merged_data.threshold_data(bending, spikes)
@@ -875,8 +874,8 @@ class PlottingPlotly():
                     bbox=dict(boxstyle="round", facecolor="white", alpha=0.5))
 
         # Set axis limits and labels
-        ax.set_xlim(Plotting._get_lim(homography_points))
-        ax.set_ylim(Plotting._get_lim(homography_points))
+        ax.set_xlim(PlottingPlotly._get_lim(homography_points))
+        ax.set_ylim(PlottingPlotly._get_lim(homography_points))
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
