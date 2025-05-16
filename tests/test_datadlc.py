@@ -9,51 +9,8 @@ from parameterized import parameterized
 
 class TestDataDLC(unittest.TestCase):
     def setUp(self):
-        # Create mock data for testing
-        self.mock_h5_data = {
-            ('filename', 'Top_left', 'x'): [0, 10, 20],
-            ('filename', 'Top_left', 'y'): [0, 10, 20],
-            ('filename', 'Top_left', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'Top_right', 'x'): [10, 20, 30],
-            ('filename', 'Top_right', 'y'): [0, 10, 20],
-            ('filename', 'Top_right', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'Bottom_right', 'x'): [10, 20, 30],
-            ('filename', 'Bottom_right', 'y'): [10, 20, 30],
-            ('filename', 'Bottom_right', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'Bottom_left', 'x'): [0, 10, 20],
-            ('filename', 'Bottom_left', 'y'): [10, 20, 30],
-            ('filename', 'Bottom_left', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'FR1', 'x'): [1, 2, 3],
-            ('filename', 'FR1', 'y'): [4, 5, 6],
-            ('filename', 'FR1', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'FR2', 'x'): [7, 8, 9],
-            ('filename', 'FR2', 'y'): [10, 11, 12],
-            ('filename', 'FR2', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'FG1', 'x'): [13, 14, 15],
-            ('filename', 'FG1', 'y'): [16, 17, 18],
-            ('filename', 'FG1', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'FG2', 'x'): [19, 20, 21],
-            ('filename', 'FG2', 'y'): [22, 23, 24],
-            ('filename', 'FG2', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'FB1', 'x'): [25, 26, 27],
-            ('filename', 'FB1', 'y'): [28, 29, 30],
-            ('filename', 'FB1', 'likelihood'): [0.9, 0.8, 0.85],
-            ('filename', 'FB2', 'x'): [31, 32, 33],
-            ('filename', 'FB2', 'y'): [34, 35, 36],
-            ('filename', 'FB2', 'likelihood'): [0.9, 0.8, 0.85],
-        }
-        self.mock_h5_file = "mock_data.h5"
-        self.mock_df = pd.DataFrame(self.mock_h5_data)
-        self.mock_df.columns = pd.MultiIndex.from_tuples(self.mock_df.columns)
-        self.mock_df.to_hdf(self.mock_h5_file, key='df', mode='w')
-
-        # Initialize DataDLC instance
+        self.mock_h5_file = "tests/mock_dlc_data.h5"
         self.data_dlc = DataDLC(self.mock_h5_file)
-
-    def tearDown(self):
-        # Clean up mock file
-        if os.path.exists(self.mock_h5_file):
-            os.remove(self.mock_h5_file)
 
     def test_init(self):
         self.assertIsInstance(self.data_dlc, DataDLC)

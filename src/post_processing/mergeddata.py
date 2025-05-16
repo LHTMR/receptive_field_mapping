@@ -223,11 +223,12 @@ class MergedData:
         Val.validate_type(df, pd.DataFrame, "DataFrame")
         Val.validate_type(path, str, "Path")
         Val.validate_type(file_format, str, "File Format")
-        Val.validate_path(path, [file_format])
 
         if file_format == 'csv':
+            Val.validate_path(path, [file_format])
             df.to_csv(path, index=False)
         elif file_format == 'xlsx':
+            Val.validate_path(path, [file_format])
             df.to_excel(path, index=False)
         else:
             raise ValueError(f"Unsupported file format: {file_format}")

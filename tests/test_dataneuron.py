@@ -9,23 +9,9 @@ from parameterized import parameterized
 
 class TestDataNeuron(unittest.TestCase):
     def setUp(self):
-        # Create mock data for testing
-        self.mock_xlsx_file = "mock_data.xlsx"
-        self.mock_data = {
-            "Time": [0, 0.1, 0.2, 0.3, 0.4, 0.5],
-            "Spikes": [0, 1, 0, 1, 0, 1],
-            "IFF": [0, 0, 0, 5, 5, 5]
-        }
-        self.mock_df = pd.DataFrame(self.mock_data)
-        self.mock_df.to_excel(self.mock_xlsx_file, index=False)
-
-        # Initialize DataNeuron instance
+        self.mock_xlsx_file = "tests/mock_neuron_data.xlsx"
+        self.mock_data = pd.read_excel(self.mock_xlsx_file)
         self.data_neuron = DataNeuron(self.mock_xlsx_file, original_freq=10)
-
-    def tearDown(self):
-        # Clean up mock file
-        if os.path.exists(self.mock_xlsx_file):
-            os.remove(self.mock_xlsx_file)
 
     def test_init(self):
         # Test initialization

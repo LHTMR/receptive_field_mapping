@@ -18,7 +18,7 @@ class TestMergedData(unittest.TestCase):
         })
 
         # Mock DataNeuron
-        self.mock_neuron = MagicMock(spec=DataNeuron)
+        self.mock_neuron = DataNeuron("tests/mock_neuron_data.xlsx", original_freq=10)
         self.mock_neuron.downsampled_df = pd.DataFrame({
             'Spikes': [0, 1, 0],
             'IFF': [0, 5, 0]
@@ -155,12 +155,14 @@ class TestMergedData(unittest.TestCase):
             self.merged_data.df_merged_cleaned, "mock_path.xlsx", "xlsx")
 
     @parameterized.expand([
-        ("invalid_df_type", "not_a_dataframe", "mock_path.csv", "csv", TypeError),
-        ("invalid_path_type", pd.DataFrame(), 123, "csv", TypeError),
-        ("invalid_file_format_type", pd.DataFrame(),
-         "mock_path.csv", 123, TypeError),
-        ("unsupported_file_format", pd.DataFrame(),
-         "mock_path.txt", "txt", ValueError),
+        ("invalid_df_type",
+         "not_a_dataframe", "mock_path.csv", "csv", TypeError),
+        ("invalid_path_type",
+         pd.DataFrame(), 123, "csv", TypeError),
+        ("invalid_file_format_type",
+         pd.DataFrame(), "mock_path.csv", 123, TypeError),
+        ("unsupported_file_format",
+         pd.DataFrame(), "mock_path.txt", "txt", ValueError),
     ])
     def test_save_data_invalid_inputs(self, name, df, path, file_format, expected_exception):
         with self.assertRaises(expected_exception):
