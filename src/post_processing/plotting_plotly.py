@@ -17,6 +17,7 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+import seaborn as sns
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 #! Make futurewarnings and runtimewarnings quiet for now
@@ -25,6 +26,46 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 class PlottingPlotly():
+    """
+    A class providing static methods for advanced plotting and video generation
+    for post-processing and visualization of behavioral and neural data.
+
+    This class includes methods to:
+        - Generate interactive and static plots using Plotly and Matplotlib.
+        - Create animated videos of homography, labeled tracking, and scrolling signals.
+        - Visualize receptive field mapping, KDE density, and scatter plots.
+        - Overlay video frames and homography outlines on plots.
+        - Validate input types, shapes, and file paths for robust plotting.
+
+    Typical usage involves calling the static methods directly, passing in
+    processed data (e.g., from MergedData or DataDLC), homography points,
+    and relevant plotting parameters.
+
+    Methods:
+        - plot_dual_y_axis: Plot two signals with dual y-axes using Plotly.
+        - generate_labeled_video: Create a video with labeled tracking points.
+        - generate_homography_video: Animate homography transformation over time.
+        - plot_homography_interactive: Interactive animation of homography points.
+        - plot_rf_mapping_animated: Animated receptive field mapping video.
+        - _compute_kde: Compute 2D kernel density estimate for scatter data.
+        - plot_kde_density_interactive: Interactive KDE density plot with Plotly.
+        - plot_scatter_interactive: Interactive scatter plot with homography overlay.
+        - background_framing: Overlay video frames and homography on Matplotlib axes.
+        - plot_kde_density: Static KDE density plot with optional video background.
+        - plot_scatter: Static scatter plot with homography and video overlay.
+        - generate_scroll_over_video: Create a scrolling plot video synchronized with video frames.
+
+    All methods are static and require explicit input arguments.
+
+    Raises:
+        TypeError, ValueError: For invalid input types, shapes, or file paths.
+
+    Example:
+        fig = PlottingPlotly.plot_scatter_interactive(
+            merged_data, x_col="x", y_col="y", homography_points=points,
+            size_col="size", color_col="Spikes"
+        )
+    """
     @staticmethod
     def _get_lim(homography_points: np.ndarray = None) -> tuple[int, int]:
         Val.validate_array_int_float(homography_points,
@@ -43,10 +84,28 @@ class PlottingPlotly():
                          color_2: str = "#d62728",   # red
                          invert_y_2: bool = False
                          ) -> go.Figure:
+        """
+        Plot two signals with dual y-axes using Plotly.
+
+        Args:
+            df (pd.DataFrame): DataFrame containing the data.
+            x_col (str): Name of the x-axis column.
+            y1_col (str): Name of the first y-axis column.
+            y2_col (str): Name of the second y-axis column.
+            y1_label (str): Label for the first y-axis.
+            y2_label (str): Label for the second y-axis.
+            title (str): Plot title.
+
+        Returns:
+            plotly.graph_objs.Figure: The resulting Plotly figure.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         # Validate inputs
-        Val.validate_dataframe(df, required_columns=columns, name="DataFrame")
         Val.validate_type(columns, list, "Columns")
         Val.validate_type_in_list(columns, str, "Columns")
+        Val.validate_dataframe(df, required_columns=columns, name="DataFrame")
         Val.validate_strings(xlabel=xlabel, ylabel_1=ylabel_1, ylabel_2=ylabel_2,
                              title=title, color_1=color_1, color_2=color_2)
 
@@ -117,20 +176,27 @@ class PlottingPlotly():
                             square_cmap: str = "Accent",
                             filament_cmap: str = "Blues") -> bytes:
         """
-        Generates a labeled video with square and filament points drawn on each frame.
+        Generate a video with labeled tracking points overlaid on video frames.
 
         Args:
-            dlc_data (DataDLC): Data object containing square and filament points.
-            video_path (str): Path to the input video.
-            square_cmap (str): Matplotlib colormap for square points.
-            filament_cmap (str): Matplotlib colormap for filament points.
+            df (pd.DataFrame): DataFrame with tracking data.
+            video_path (str): Path to the input video file.
+            output_path (str): Path to save the output video.
+            columns (list of str): List of columns to plot as points.
+            colors (list of str): List of colors for each point.
+            fps (int): Frames per second for output video.
+            codec (str): Video codec to use.
 
         Returns:
-            bytes: The labeled video as a bytes object.
+            bytes: The video as a byte stream.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
         """
         # Validate inputs
         Val.validate_type(dlc_data, DataDLC, "DLC Data")
         Val.validate_path(video_path, file_types=[".mp4", ".avi"])
+        Val.validate_path_exists(video_path)
         Val.validate_strings(square_cmap=square_cmap, filament_cmap=filament_cmap)
 
         # Extract data
@@ -199,6 +265,25 @@ class PlottingPlotly():
                                   y_label: str = "y (mm)",
                                   color: str = "#d62728",
                                   figsize: tuple[int] = (12, 12)) -> bytes:
+        """
+        Create an animated video showing the homography transformation over time.
+
+        Args:
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            df_transformed_monofil (pd.DataFrame): DataFrame with transformed points.
+            fps (int): Frames per second for the video.
+            title (str): Title for the animation.
+            x_label (str): X-axis label.
+            y_label (str): Y-axis label.
+            color (str): Color for the plot.
+            figsize (tuple): Figure size (width, height).
+
+        Returns:
+            bytes: The video as a byte stream.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         # Validate inputs
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
@@ -249,11 +334,30 @@ class PlottingPlotly():
                                     color="royalblue",
                                     x_label="x (mm)",
                                     y_label="y (mm)") -> go.Figure:
+        """
+        Generate an interactive Plotly animation of homography points.
+
+        Args:
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            df_transformed_monofil (pd.DataFrame): DataFrame with transformed points.
+            title (str): Plot title.
+            color (str): Line and marker color.
+            x_label (str): X-axis label.
+            y_label (str): Y-axis label.
+
+        Returns:
+            plotly.graph_objs.Figure: The interactive Plotly figure.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         # Validate inputs
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
         Val.validate_type(df_transformed_monofil, pd.DataFrame,
                           "Transformed Monofilament Data")
+        print(f"color: {color}")
+        print(f"color type: {type(color)}")
         Val.validate_strings(title=title, color=color,
                              x_label=x_label, y_label=y_label)
 
@@ -363,6 +467,31 @@ class PlottingPlotly():
                                  fps: int = 30,
                                  figsize: tuple[int] = (12, 12),
                                  cmap: str = "viridis") -> bytes:
+        """
+        Create an animated video visualizing receptive field mapping.
+
+        Args:
+            merged_data (MergedData): The merged data object.
+            x_col (str): Name of the x-axis column.
+            y_col (str): Name of the y-axis column.
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            size_col (str): Column for marker size.
+            color_col (str): Column for marker color.
+            title (str): Plot title.
+            bending (bool): Whether to use bending threshold.
+            spikes (bool): Whether to use spikes threshold.
+            xlabel (str): X-axis label.
+            ylabel (str): Y-axis label.
+            fps (int): Frames per second for the video.
+            figsize (tuple): Figure size (width, height).
+            cmap (str): Colormap name.
+
+        Returns:
+            bytes: The video as a byte stream.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
         Val.validate_strings(x_col=x_col, y_col=y_col, size_col=size_col, color_col=color_col,
@@ -471,17 +600,20 @@ class PlottingPlotly():
                      grid_limits: tuple,
                      bw_method: float = 0.2):
         """
-        Helper method to compute KDE for a given DataFrame.
+        Compute a 2D kernel density estimate (KDE) for scatter data.
 
         Args:
             df (pd.DataFrame): DataFrame containing the data.
-            x_col (str): Column name for x-axis data.
-            y_col (str): Column name for y-axis data.
-            grid_limits (tuple): Tuple containing (xmin, xmax, ymin, ymax) for the grid.
+            x_col (str): Name of the x-axis column.
+            y_col (str): Name of the y-axis column.
+            grid_limits (tuple): (xmin, xmax, ymin, ymax) for the KDE grid.
             bw_method (float): Bandwidth method for KDE.
 
         Returns:
-            xx, yy, zz: Grid and KDE density values.
+            tuple: (xx, yy, zz) meshgrid arrays for plotting.
+
+        Raises:
+            KeyError, ValueError: If columns or grid limits are invalid.
         """
         xmin, xmax, ymin, ymax = grid_limits
         xx, yy = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
@@ -505,23 +637,29 @@ class PlottingPlotly():
                          cmap_spikes: str = "Reds",
                          threshold_percentage: float = 0.05):
         """
-        Plots KDE density for bending and spikes on the same plot.
+        Generate an interactive KDE density plot using Plotly.
 
         Args:
-            merged_data (MergedData): Merged data object.
-            x_col (str): Column name for x-axis data.
-            y_col (str): Column name for y-axis data.
-            homography_points (np.ndarray): Homography points for grid limits.
-            bending (bool): Whether to include bending data.
-            spikes (bool): Whether to include spikes data.
+            merged_data (MergedData): The merged data object.
+            x_col (str): Name of the x-axis column.
+            y_col (str): Name of the y-axis column.
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            bending (bool): Whether to plot bending KDE.
+            spikes (bool): Whether to plot spikes KDE.
+            bw_bending (float): Bandwidth for bending KDE.
+            bw_spikes (float): Bandwidth for spikes KDE.
             title (str): Plot title.
             xlabel (str): X-axis label.
             ylabel (str): Y-axis label.
-            cmap (str): Colormap for the KDE plots.
-            threshold_percentage (float): Percentage of the maximum density to use as a threshold.
+            cmap_bending (str): Colormap for bending KDE.
+            cmap_spikes (str): Colormap for spikes KDE.
+            threshold_percentage (float): Threshold for density masking.
 
         Returns:
-            go.Figure: Plotly figure object.
+            plotly.graph_objs.Figure: The interactive Plotly figure.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
         """
         # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
@@ -629,6 +767,29 @@ class PlottingPlotly():
                      title: str = 'Scatter Plot',
                      xlabel: str = 'x (mm)', ylabel: str = 'y (mm)',
                      cmap: str = 'Viridis'):
+        """
+        Generate an interactive scatter plot with homography overlay using Plotly.
+
+        Args:
+            merged_data (MergedData): The merged data object.
+            x_col (str): Name of the x-axis column.
+            y_col (str): Name of the y-axis column.
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            size_col (str): Column for marker size.
+            color_col (str, optional): Column for marker color or 'Spikes'.
+            bending (bool): Whether to use bending threshold.
+            spikes (bool): Whether to use spikes threshold.
+            title (str): Plot title.
+            xlabel (str): X-axis label.
+            ylabel (str): Y-axis label.
+            cmap (str): Colormap name.
+
+        Returns:
+            plotly.graph_objs.Figure: The interactive Plotly figure.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         # Validate inputs
         Val.validate_type(merged_data, MergedData, "MergedData")
         Val.validate_strings(x_col=x_col, y_col=y_col, size_col=size_col, color_col=color_col,
@@ -711,6 +872,22 @@ class PlottingPlotly():
                            homography_points: np.ndarray,
                            video_path: str = None,
                            index: int = None):
+        """
+        Overlay video frame and homography lines on a Matplotlib axis.
+
+        Args:
+            merged_data (MergedData): The merged data object.
+            ax (matplotlib.axes.Axes): The axis to draw on.
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            video_path (str, optional): Path to the video file.
+            index (int, optional): Frame index to extract from the video.
+
+        Returns:
+            None
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
         if video_path is not None and index is not None:
@@ -769,7 +946,31 @@ class PlottingPlotly():
                          frame: bool = False,
                          video_path: str = None,
                          index: int = None):
+        """
+        Generate a static KDE density plot with optional video background.
 
+        Args:
+            merged_data (MergedData): The merged data object.
+            x_col (str): Name of the x-axis column.
+            y_col (str): Name of the y-axis column.
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            bending (bool): Whether to plot bending KDE.
+            spikes (bool): Whether to plot spikes KDE.
+            title (str): Plot title.
+            xlabel (str): X-axis label.
+            ylabel (str): Y-axis label.
+            figsize (tuple): Figure size (width, height).
+            cmap (str): Colormap name.
+            frame (bool): Whether to overlay a video frame.
+            video_path (str, optional): Path to the video file.
+            index (int, optional): Frame index to extract from the video.
+
+        Returns:
+            tuple: (matplotlib.figure.Figure, matplotlib.axes.Axes)
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         Val.validate_type(merged_data, MergedData, "MergedData")
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
@@ -814,7 +1015,34 @@ class PlottingPlotly():
                      frame: bool = False,
                      video_path: str = None,
                      index: int = None):
+        """
+        Generate a static scatter plot with homography and optional video overlay.
 
+        Args:
+            merged_data (MergedData): The merged data object.
+            x_col (str): Name of the x-axis column.
+            y_col (str): Name of the y-axis column.
+            homography_points (np.ndarray): Array of homography points (4, 2).
+            size_col (str): Column for marker size.
+            color_col (str, optional): Column for marker color or 'Spikes'.
+            bending (bool): Whether to use bending threshold.
+            spikes (bool): Whether to use spikes threshold.
+            title (str): Plot title.
+            legend_title (str): Legend title.
+            xlabel (str): X-axis label.
+            ylabel (str): Y-axis label.
+            figsize (tuple): Figure size (width, height).
+            cmap (str): Colormap name.
+            frame (bool): Whether to overlay a video frame.
+            video_path (str, optional): Path to the video file.
+            index (int, optional): Frame index to extract from the video.
+
+        Returns:
+            tuple: (matplotlib.figure.Figure, matplotlib.axes.Axes)
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         Val.validate_type(merged_data, MergedData, "MergedData")
         Val.validate_array(homography_points, shape=(4, 2),
                            name="Homography Points")
@@ -890,11 +1118,29 @@ class PlottingPlotly():
                                    title: str = "Scrolling Plot",
                                    color_1: str = "#1f77b4",
                                    color_2: str = "#d62728") -> bytes:
+        """
+        Generate a scrolling plot video synchronized with video frames.
+
+        Args:
+            merged_data (MergedData): The merged data object.
+            columns (list of str): List of column names to plot.
+            video_path (str): Path to the video file.
+            title (str): Title for the plot.
+            color_1 (str): Color for the first signal.
+            color_2 (str): Color for the second signal.
+
+        Returns:
+            bytes: The video as a byte stream.
+
+        Raises:
+            TypeError, ValueError: If input validation fails.
+        """
         # Validate inputs
         Val.validate_type(merged_data, MergedData, "Merged Data")
         Val.validate_type_in_list(columns, str, "Columns")
         Val.validate_path(video_path, file_types=[".mp4", ".avi"])
         Val.validate_strings(title=title, color_1=color_1, color_2=color_2)
+        Val.validate_path_exists(video_path)
 
         df_merged = merged_data.df_merged.copy()
 

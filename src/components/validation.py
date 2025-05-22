@@ -7,12 +7,25 @@ class Validation:
     @staticmethod
     def validate_path(path: str, file_types: list[str] = None):
         if not isinstance(path, str):
-            raise ValueError(
+            raise TypeError(
                 f"The path must be a string. Got {type(path)} instead.")
         if len(file_types) > 0:
             if not any(path.endswith(ext) for ext in file_types):
                 raise ValueError(
                     f"The file must be one of {file_types}. Got '{path}' instead.")
+
+    @staticmethod
+    def validate_path_exists(path: str):
+        if not isinstance(path, str):
+            raise TypeError(
+                f"The path must be a string. Got {type(path)} instead.")
+        # Raise file not found error if the file does not exist
+        try:
+            with open(path, 'r') as file:
+                pass
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"The file '{path}' does not exist. Please check the path.")
 
     @staticmethod
     def validate_strings(**kwargs):
@@ -28,7 +41,7 @@ class Validation:
     @staticmethod
     def validate_type_in_list(value, expected_types, name: str):
         if not isinstance(value, list) or not all(isinstance(v, expected_types) for v in value):
-            raise ValueError(
+            raise TypeError(
                 f"{name} must be a list of {expected_types}. Got {type(value)} instead.")
 
     @staticmethod
@@ -91,7 +104,7 @@ class Validation:
     @staticmethod
     def validate_dataframe(df: pd.DataFrame, required_columns: list = None, name: str = "DataFrame", optional: bool = False):
         if not isinstance(df, pd.DataFrame):
-            raise ValueError(
+            raise TypeError(
                 f"{name} must be a pandas DataFrame. Got {type(df)} instead.")
 
         column_mapping = {}  # To store matched columns for renaming

@@ -100,6 +100,6 @@ def convert_all_videos_in_directory(input_dir, output_dir):
     print("All videos converted.")
 
 
-#input_dir = r'C:\Python Programming\LIU\Data\Videos\2025-04-29_train_white_tip'
-#output_dir = r'C:\Python Programming\LIU\Data\Videos\2025-04-29_train_white_tip\Converted'
+#input_dir = r'C:\Python Programming\LIU\Data\Videos\videos_from_Ackerley_Lab_Marseilles'
+#output_dir = r'C:\Python Programming\LIU\Data\Videos\videos_from_Ackerley_Lab_Marseilles\Converted'
 #convert_all_videos_in_directory(input_dir, output_dir)
