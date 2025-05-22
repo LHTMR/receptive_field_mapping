@@ -12,8 +12,8 @@ Make sure you have the following installed:
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/GabeLack/receptive_field_mapping_app.git
+cd receptive_field_mapping_app
 ```
 
 Replace the URL with your actual repository address.
@@ -37,11 +37,14 @@ conda activate RF_MAPPING
 Replace `RF_MAPPING` with the name defined at the top of `full_env.yml` (e.g., `name: RF_MAPPING`).
 
 ### 5. Run the Streamlit App
-
+For windows:
 ```bash
 streamlit run app.py
 ```
-
+For Linux/Mac:
+```bash
+STREAMLIT_WATCHER_TYPE=none streamlit run app.py
+```
 After a moment, your default browser should open automatically with the Streamlit interface. If not, look for the local URL (e.g., `http://localhost:8501`) in the terminal.
 
 ### 6. Optional: Deactivate or Remove Environment
