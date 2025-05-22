@@ -16,8 +16,6 @@ git clone https://github.com/GabeLack/receptive_field_mapping_app.git
 cd receptive_field_mapping_app
 ```
 
-Replace the URL with your actual repository address.
-
 ### 3. Create the Conda Environment
 
 Create the environment from the provided YAML file:
