@@ -19,11 +19,18 @@ cd receptive_field_mapping_app
 ### 3. Create the Conda Environment
 
 Create the environment from the provided YAML file:
-
+For Windows:
 ```bash
-conda env create -f RF_MAPPING.yml
+conda env create -f RF_MAPPING_win.yml
 ```
-
+For Linux:
+```bash
+conda env create -f RF_MAPPING_lnx.yml
+```
+For MacOS:
+```bash
+conda env create -f RF_MAPPING_mac.yml
+```
 This will create a new Conda environment with all the required dependencies.
 
 ### 4. Activate the Environment
