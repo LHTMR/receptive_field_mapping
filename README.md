@@ -8,7 +8,7 @@ Make sure you have the following installed:
 
 * Git
 * Anaconda or Miniconda (Python 3.9+ recommended)
-
+* The model downloaded on your computer
 ### 2. Clone the Repository
 
 ```bash
