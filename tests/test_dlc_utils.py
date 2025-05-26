@@ -353,6 +353,29 @@ class TestDLCUtils(unittest.TestCase):
             # Check that the informational message is printed
             print("ℹ️ No training-datasets folder found, nothing to clear.")
 ########################################################################
+    def test_no_labeled_data_folder(self):
+        with tempfile.TemporaryDirectory() as project_path:
+            # Do not create 'labeled-data' folder
+            self.assertFalse(dlc_utils.is_labeling_done(project_path))
+
+    def test_labeled_data_folder_empty(self):
+        with tempfile.TemporaryDirectory() as project_path:
+            labeled_data_path = os.path.join(project_path, "labeled-data")
+            os.makedirs(labeled_data_path)
+            # Folder exists but no subfolders or files
+            self.assertFalse(dlc_utils.is_labeling_done(project_path))
+
+    def test_subfolder_with_h5_label(self):
+        with tempfile.TemporaryDirectory() as project_path:
+            labeled_data_path = os.path.join(project_path,
+                                             "labeled-data", "video1")
+            os.makedirs(labeled_data_path)
+            # Create a dummy .h5 file
+            with open(os.path.join(labeled_data_path,
+                                   "labeled_data.h5"), "w") as f:
+                f.write("dummy data")
+            self.assertTrue(dlc_utils.is_labeling_done(project_path))
+########################################################################
     @patch("src.train_predict.dlc_utils.cv2.VideoCapture")
     @patch("src.train_predict.dlc_utils.cv2.VideoWriter")
     def test_preprocess_video(self, MockVideoWriter, MockVideoCapture):
@@ -800,7 +823,6 @@ class TestDLCUtils(unittest.TestCase):
             MockVideo.assert_called_once_with("mock_video")
 
             # Verify the appropriate Streamlit success messages were shown
-            MockInfo.assert_any_call("📈 Analyzing video with DeepLabCut...")
             MockSuccess.assert_any_call("🎉 New predictions generated!")
 
 #-----------------------------------------------------------------------

@@ -17,7 +17,10 @@ tab1, tab2 = st.tabs(["Create Labeled Video", "Labeling / Retraining"])
 with tab1:
     st.title("DeepLabCut Video Prediction")
     # Get project path from user
-    project_path = st.text_input("📁 Enter the full path to your DeepLabCut project folder:")
+    project_path = st.text_input(
+        "📁 Enter the full path to your DeepLabCut project folder:\nExample: C:\\....\\td_res_3-conv_vid-2025-03-18"
+    )
+
 
     if project_path:
         # Strip surrounding quotes if they exist
@@ -80,8 +83,8 @@ with tab1:
                 dlc_utils.predict_and_show_labeled_video(config_path,
                                     st.session_state["processed_video_path"],
                                     videos_dir)
-                st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page")
-                st.markdown("### If not, move to the **Labeling/Retraining** tab:")
+                st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page on the left.")
+                st.markdown("### If not, scroll up to the **Labeling/Retraining** tab at the top of this page.")
 
 with tab2:
     if "config_path" in st.session_state and\
@@ -117,28 +120,31 @@ with tab2:
                                           step=5,
                                           value=50)
 
-        if st.button("2️⃣ Done labeling? Continue to retrain"):
-            # Add video to config.yaml
-            dlc_utils.add_video_to_config(config_path, processed_video_path)
-            st.info("🛠️ Removing previous predictions")
-            # Remove other snapshots
-            dlc_utils.clean_snapshots(train_folder=train_folder)
-            # Remove previous predictions
-            dlc_utils.delete_prev_pred(videos_dir)
-            # Remove any previous training sets
-            dlc_utils.clear_training_datasets(project_path)
-            # Retrain the model
-            dlc_utils.run_retraining(config_path,train_folder,
-                           num_epochs,
-                           num_detector_epochs)
-            st.markdown("### 📊 Training Loss Overview")
-            dlc_utils.show_training_plots(train_folder)
-            # Make prediction and show labeled video
-            dlc_utils.predict_and_show_labeled_video(config_path,
-                                    st.session_state["processed_video_path"],
-                                    videos_dir)
-            st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page")
-            st.markdown("### If not, try label more frames or increase number of epochs")
+        if st.button("2️⃣ Done with step 1? Click here to retrain the Model"):
+            if not dlc_utils.is_labeling_done(project_path):
+                st.warning("⚠️ No labeled data found. Please label at least 5 frames and save before continuing.")
+            else:
+                # Add video to config.yaml
+                dlc_utils.add_video_to_config(config_path, processed_video_path)
+                st.info("🛠️ Removing previous predictions")
+                # Remove other snapshots
+                dlc_utils.clean_snapshots(train_folder=train_folder)
+                # Remove previous predictions
+                dlc_utils.delete_prev_pred(videos_dir)
+                # Remove any previous training sets
+                dlc_utils.clear_training_datasets(project_path)
+                # Retrain the model
+                dlc_utils.run_retraining(config_path,train_folder,
+                            num_epochs,
+                            num_detector_epochs)
+                st.markdown("### 📊 Training Loss Overview")
+                dlc_utils.show_training_plots(train_folder)
+                # Make prediction and show labeled video
+                dlc_utils.predict_and_show_labeled_video(config_path,
+                                        st.session_state["processed_video_path"],
+                                        videos_dir)
+                st.markdown("### ✅ Happy with the result? Continue to **Post Processing** page on the left")
+                st.markdown("### If not, try label more frames or increase number of epochs")
     else:
         st.warning("⚠️ Please upload and process a video in Tab 1 first.")
 
