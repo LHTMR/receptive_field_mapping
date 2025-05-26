@@ -36,13 +36,13 @@ class DataNeuron:
         FileNotFoundError: If the file path does not exist.
     """
     def __init__(self,
-                 xclc_path: str,
+                 neuron_csv_path: str,
                  original_freq: int) -> None:
-        Val.validate_path(xclc_path, file_types=[".xlsx"])
+        Val.validate_path(neuron_csv_path, file_types=[".csv"])
         Val.validate_type(original_freq, int, "Original Frequency")
         Val.validate_positive(original_freq, "Original Frequency")
 
-        self.df = pd.read_excel(xclc_path)
+        self.df = pd.read_csv(neuron_csv_path)
         self.original_freq = original_freq
         self.downsampled_df = None
 
@@ -135,29 +135,26 @@ class DataNeuron:
         Returns:
             None: The method modifies the DataFrame in place.
         """
-        interval = 1 / self.original_freq  # Compute time step based on frequency
+        interval = 1 / self.original_freq
         min_time, max_time = 0, self.df['Time'].max()
 
         # Generate complete range of timestamps
         full_time_range = np.arange(min_time, max_time + interval, interval)
-
-        # Create a new DataFrame with 0s
-        full_df = pd.DataFrame({'Time': full_time_range, 'Spikes': 0})
-
-        # Round the Time columns to avoid floating-point precision issues
+        full_df = pd.DataFrame({'Time': full_time_range})
         full_df['Time'] = full_df['Time'].round(6)
+        self.df['Time'] = self.df['Time'].round(6)
 
-        # Merge with original data, ensuring 1s are preserved
-        filled_df = full_df.merge(self.df, on='Time', how="left", suffixes=('', '_original'))
-        filled_df['Spikes'] = filled_df['Spikes' + '_original'].fillna(0).astype(int)
-        filled_df = filled_df.drop(columns=['Spikes' + '_original'])
+        # Merge with original data
+        filled_df = full_df.merge(self.df, on='Time', how="left")
+
+        # Fill missing Spikes with 0
+        filled_df['Spikes'] = filled_df['Spikes'].fillna(0).astype(int)
 
         # Fill IFF column if it exists
         if 'IFF' in filled_df.columns:
             filled_df['IFF'].fillna(method='ffill', inplace=True)
             filled_df['IFF'].fillna(0, inplace=True)
 
-        # Update the DataFrame
         self.df = filled_df
 
     def downsample(self,

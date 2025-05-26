@@ -64,13 +64,25 @@ with tab1:
     if st.session_state.data_dlc is not None:
         st.markdown("""
             #### Outliers
-            The DLC data was processed to extract the square and monofilament
-            points. The outliers of these are then detected from the derivative
-            and imputed via machine learning models. Currently it will default
-            to the recommended BR model, but you can select any of the other model.
-            The plots will then show the derivative of the square and monofilament
-            points before and after the imputation, if there are still spikes
-            above 20-50 then consider raising the threshold.
+            The DLC data was processed to extract the square and monofilament points.
+            Outliers are detected from the derivative (frame-to-frame difference)
+            of these points and imputed via machine learning models. A large
+            difference in movement between frames is determined as an error in
+            the tracking, thus an outlier.
+
+            The threshold controls how sensitive the outlier detection is.  
+            A frames point is marked as an outlier if its derivative is more than the
+            chosen number of standard deviations away from the mean derivative value:
+            - Lower threshold = more sensitive (more outliers detected)
+            - Higher threshold = less sensitive (fewer outliers detected)
+
+            Currently it will default to the recommended BR model, but you can
+            select any of the other models. The plots will then show the derivative
+            of the square and monofilament points before and after the imputation.  
+            If there are still spikes above 20-50 for the square, consider
+            adjusting the standard deviation threshold to get it down to the 10s
+            in the after plot. The filament is considerably harder to impute for,
+            so just try to get it around or below 100. Lower is better.
             """)
 
         df_square_derivative = OutlierImputer.transform_to_derivative(
@@ -139,7 +151,11 @@ with tab1:
             st.session_state.imputed_square = True
             st.success("Outliers imputed successfully for the square points!")
         else:
-            st.info("Square points already imputed. Skipping this step.")
+            st.info("""
+                Square points already imputed to create previous labeled video.
+                Skipping this step. Plotting comparisons of the imputations
+                result can still be done.
+                """)
 
         # Impute outliers for the filament points
         if not st.session_state.imputed_filament:
@@ -232,7 +248,10 @@ with tab1:
 
         st.write("""
             #### Homography
-            The homography points are the four corners of the square in the video.
+            Homography is applied to the monofilament data to transform it,
+            this transformed data will be used for the RF mapping and other visualizations.
+            The target homography points are the four corners of the square in the video.
+            The recommended values are the real distance values (mm) of the square.
             The order of the points are transformed thusly based on the inputs below:
             """)
 

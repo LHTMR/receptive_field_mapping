@@ -356,8 +356,6 @@ class PlottingPlotly():
                            name="Homography Points")
         Val.validate_type(df_transformed_monofil, pd.DataFrame,
                           "Transformed Monofilament Data")
-        print(f"color: {color}")
-        print(f"color type: {type(color)}")
         Val.validate_strings(title=title, color=color,
                              x_label=x_label, y_label=y_label)
 
@@ -909,8 +907,8 @@ class PlottingPlotly():
             cap.release()
 
             if not ret:
-                print("Error: Could not read video frame.")
-                return
+                raise ValueError(
+                    f"Could not read frame {index} from video {video_path}.")
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w, _ = frame.shape

@@ -21,27 +21,28 @@ The model is designed to detect:
 st.markdown("#### ✅ Lighting and Camera")
 st.markdown("""
 - Use **static, clean white lighting** for the subject.
-- Ensure a **stationary camera** throughout the recording.
+- Ensure a **stationary camera** throughout the recording. Either use a tripod or have steady arms.
 """)
 st.markdown("#### ✅ Skin Dot Marking")
 st.markdown("""
 - Paint **4 dots** in the corners of a square using a **bright, opaque green** marker.
     - Recommended: [Posca paint pens](https://www.posca.com/en/product/pc-5m/)
-
+- Avoid having other objects or markings in the frame that could be confused with the dots.
 - Example of bright green dots on skin, in a well-lit setting:
 """)
 dots_img = Image.open(os.path.join(ASSETS_PATH, "dots_example.png"))
-st.image(dots_img, caption="Example: Bright green dots on skin", use_container_width=True)
+st.image(dots_img, caption="Example: Bright green dots on skin", width=500)
 
 st.markdown("#### ✅ Filament Marking")
 st.markdown("""
-- Paint the filament with **3 distinct opaque colors**.
+- Paint the filament with **2 distinct opaque colors in pattern**.
 - This allows the model to detect **6 separate points** for bend analysis.
+- Avoid similar colors or objects to the filament that could confuse the model.
 
 - Example of a filament painted white and dark blue:
 """)
 filament_img = Image.open(os.path.join(ASSETS_PATH, "filament_example.png"))
-st.image(filament_img, caption="Example: Colored filament with clear zones", use_container_width=True)
+st.image(filament_img, caption="Example: Colored filament with clear zones", width=500)
 
 st.markdown("#### ✅ Clean the Skin")
 st.markdown("- Ensure no old marks or blemishes interfere with detection.")

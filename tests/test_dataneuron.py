@@ -9,9 +9,9 @@ from parameterized import parameterized
 
 class TestDataNeuron(unittest.TestCase):
     def setUp(self):
-        self.mock_xlsx_file = "tests/mock_neuron_data.xlsx"
-        self.mock_data = pd.read_excel(self.mock_xlsx_file)
-        self.data_neuron = DataNeuron(self.mock_xlsx_file, original_freq=10)
+        self.mock_csv_file = "tests/mock_neuron_data.csv"
+        self.mock_data = pd.read_csv(self.mock_csv_file)
+        self.data_neuron = DataNeuron(self.mock_csv_file, original_freq=10)
 
     def test_init(self):
         # Test initialization
@@ -23,13 +23,13 @@ class TestDataNeuron(unittest.TestCase):
     def test_validate_required_columns(self):
         # Test that required columns are validated during initialization
         with patch("src.components.validation.Validation.validate_dataframe") as mock_validate:
-            DataNeuron(self.mock_xlsx_file, original_freq=10)
+            DataNeuron(self.mock_csv_file, original_freq=10)
             mock_validate.assert_called()
 
     def test_invalid_file_path(self):
         # Test invalid file path
         with self.assertRaises(FileNotFoundError):
-            DataNeuron("invalid_path.xlsx", original_freq=10)
+            DataNeuron("invalid_path.csv", original_freq=10)
 
     @parameterized.expand([
         ("negative_freq", -10, ValueError),
@@ -38,7 +38,7 @@ class TestDataNeuron(unittest.TestCase):
     ])
     def test_invalid_original_freq(self, name, original_freq, expected_exception):
         with self.assertRaises(expected_exception):
-            DataNeuron(self.mock_xlsx_file, original_freq=original_freq)
+            DataNeuron(self.mock_csv_file, original_freq=original_freq)
 
     def test_calculate_iff(self):
         # Remove the IFF column and recalculate it

@@ -1,0 +1,14 @@
+{
+    "FR1_x": "BayesianRidge()",
+    "FR1_y": "BayesianRidge(alpha_1=0.0001)",
+    "FR2_x": "BayesianRidge(alpha_1=0.0001, lambda_1=1e-05)",
+    "FR2_y": "BayesianRidge()",
+    "FG1_x": "BayesianRidge(alpha_1=0.0001, lambda_1=0.0001)",
+    "FG1_y": "BayesianRidge(lambda_1=1e-05)",
+    "FG2_x": "BayesianRidge()",
+    "FG2_y": "BayesianRidge(alpha_1=0.0001)",
+    "FB1_x": "BayesianRidge(alpha_1=0.0001, lambda_1=1e-05)",
+    "FB1_y": "BayesianRidge(lambda_1=0.0001)",
+    "FB2_x": "BayesianRidge()",
+    "FB2_y": "BayesianRidge(lambda_1=0.0001)"
+}
