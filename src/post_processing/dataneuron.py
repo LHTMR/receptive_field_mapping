@@ -73,6 +73,8 @@ class DataNeuron:
         # If IFF column is missing, calculate it
         if 'IFF' not in self.df.columns:
             self.calculate_iff()
+            
+        print(f"Column dtypes: {self.df.dtypes}")
 
     def calculate_iff(self) -> None:
         """
@@ -189,6 +191,7 @@ class DataNeuron:
         # Apply a rolling window with a maximum function to preserve binary components
         downsampled_df = pd.DataFrame()
 
+        self.df['IFF'] = pd.to_numeric(self.df['IFF'], errors='coerce')
         # Downsample the iff/freq column by picking the maximum value in the window
         downsampled_df['IFF'] = \
             self.df['IFF'].rolling(window=downsample_factor,
