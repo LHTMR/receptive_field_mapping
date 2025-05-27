@@ -274,6 +274,32 @@ def clear_training_datasets(project_path: str) -> None:
     else:
         print("ℹ️ No training-datasets folder found, nothing to clear.")
 
+def is_labeling_done(project_path: str) -> bool:
+    """
+    Checks whether any labeled data exists in the 'labeled-data' folder of a DeepLabCut project.
+
+    This function looks for subdirectories inside 'labeled-data' and checks if they contain
+    at least one label file (.h5 or .csv). These files indicate that at least one frame has
+    been labeled and saved using the labeling GUI.
+
+    Args:
+        project_path (str): The path to the root of the DeepLabCut project.
+
+    Returns:
+        bool: True if labeled data is found, False otherwise.
+    """
+    labeled_data_path = os.path.join(project_path, 'labeled-data')
+    if not os.path.exists(labeled_data_path):
+        return False
+    for subdir in os.listdir(labeled_data_path):
+        subdir_path = os.path.join(labeled_data_path, subdir)
+        if os.path.isdir(subdir_path):
+            label_files = [f for f in os.listdir(subdir_path)\
+                            if f.endswith('.h5') or f.endswith('.csv')]
+            if label_files:  # Labeled data exists
+                return True
+    return False
+
 def preprocess_video(input_video_path: str, output_video_path: str) -> str:
     """
     Preprocesses a video by removing audio, scaling it to a target resolution, 
@@ -472,12 +498,13 @@ def napari_instructions():
     #### Step 3
     Click `File -> Open Folder...`, navigate into the `labeled-data` folder. 
     Within should now be a folder with a name similar to the uploaded video. 
-    Select open on that folder. Finally,
-    select `napari DeepLabCut`. Now label the images!
+    Select open on that folder. 
+    Finally, select `napari DeepLabCut`. 
+    Now label the images like shown in the picture!
     """)
     st.image(ASSETS_PATH / "step 4.png", caption="")
     st.image(ASSETS_PATH / "step 5.png", caption="")
-
+    st.image(ASSETS_PATH / "labels_shown.png", caption="")
     # Step 4
     st.markdown("""
     #### Step 4
@@ -518,7 +545,7 @@ def run_labeling(config_path, processed_video_path):
             userfeedback=False
         )
         st.success("🖼️ Frames extracted!")
-
+        st.info("Napari will now open in a separate window.\n Scroll down and follow the instructions.")
         subprocess.Popen([sys.executable, "-m", "napari"])
         napari_instructions()
         st.warning("📝 Napari is running—label your frames, then close Napari when you’re done.")
@@ -615,7 +642,7 @@ def predict_and_show_labeled_video(config_path: str,
         Exception: If any error occurs during the analysis, labeling, or video display, an error message is shown in Streamlit.
     """
     try:
-        st.info("📈 Analyzing video with DeepLabCut...")
+        st.info("📈 Running predictions and generating the labeled video with imputed outliers. Please wait...")
         deeplabcut.analyze_videos(config_path, [video_path], shuffle=1)
         st.success("🎉 New predictions generated!")
 
