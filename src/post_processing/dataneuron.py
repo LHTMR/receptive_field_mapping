@@ -14,7 +14,7 @@ class DataNeuron:
     A class for handling neuron data, processing spike and time information, 
     and performing operations such as frequency adjustment, spike filling, and IFF calculation.
 
-    This class processes neuron data from an Excel file, validates the required columns, and ensures
+    This class processes neuron data from aa csv file, validates the required columns, and ensures
     that the data is in a consistent format. It handles various tasks such as:
         - Ensuring the data has valid columns (`Time`, `Spikes`, `Neuron`, `IFF`, etc.)
         - Adjusting the frequency of the data if necessary
