@@ -1,4 +1,7 @@
 import streamlit as st
+from PIL import Image
+from pathlib import Path
+import os
 
 st.title("🧠 Receptive Field Mapping App")
 
@@ -40,6 +43,9 @@ st.header("⚙️ Quick Background Summary")
 st.markdown("""
 This app uses **DeepLabCut** for marker tracking, aligns **neural spikes** to tracked behavioral events, and enables visualization through a simple **Streamlit interface** and **Plotly Express**.
 """)
+
+dots_img = Image.open(os.path.join(Path("assets"), "flowchart.png"))
+st.image(dots_img, caption="Backend logic flow for creating a labeled video then post-processing.")
 
 st.markdown("---")
 
