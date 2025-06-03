@@ -89,14 +89,14 @@ class MergedData:
         df_dlc['Bending_Binary'] = (df_dlc['Bending_ZScore'] > self.threshold).astype(int)
 
         # Fill gaps in neuron Spikes column with dynamic width
-        df_neuron['Spikes_Filled'] = df_neuron['Spikes'].copy()
+        df_neuron['Spikes_Filled'] = df_neuron['Spike'].copy()
         gap_start = None
         for i in range(len(df_neuron)):
-            if df_neuron['Spikes'][i] == 1:
+            if df_neuron['Spike'][i] == 1:
                 if gap_start is not None and (i - gap_start) <= self.max_gap_fill:
                     df_neuron['Spikes_Filled'][gap_start:i] = 1
                 gap_start = i + 1
-            elif df_neuron['Spikes'][i] == 0 and gap_start is None:
+            elif df_neuron['Spike'][i] == 0 and gap_start is None:
                 gap_start = i
 
         # Perform sequence alignment using cross-correlation
@@ -111,8 +111,8 @@ class MergedData:
 
         # After merging, fill the gaps created from shifting
         # Always zero-fill for Spikes and Spikes_Filled
-        self.df_merged[['Spikes', 'Spikes_Filled']] = \
-            self.df_merged[['Spikes', 'Spikes_Filled']].fillna(0).astype(int)
+        self.df_merged[['Spike', 'Spikes_Filled']] = \
+            self.df_merged[['Spike', 'Spikes_Filled']].fillna(0).astype(int)
 
         # Fill IFF column based on shift direction
         if best_shift < 0:
@@ -138,7 +138,7 @@ class MergedData:
         # Use the Bending_Binary column instead of recalculating the threshold
         self.df_merged_cleaned = self.df_merged[
             (self.df_merged['Bending_Binary'] == 1) |
-            (self.df_merged['Spikes'] != 0)]
+            (self.df_merged['Spike'] != 0)]
         return self.df_merged_cleaned
 
     def threshold_data(self,
@@ -170,7 +170,7 @@ class MergedData:
         if bending:
             condition |= (self.df_merged['Bending_Binary'] == 1)
         if spikes:
-            condition |= (self.df_merged['Spikes'] != 0)
+            condition |= (self.df_merged['Spike'] != 0)
 
         # Return the filtered DataFrame
         return self.df_merged[condition]
@@ -192,13 +192,13 @@ class MergedData:
         """
         high_bend_w_neuron = self.df_merged[
             (self.df_merged['Bending_Binary'] == 1) &
-            (self.df_merged['Spikes'] >= 1)]
+            (self.df_merged['Spike'] >= 1)]
         high_bend_wo_neuron = self.df_merged[
             (self.df_merged['Bending_Binary'] == 1) &
-            (self.df_merged['Spikes'] == 0)]
+            (self.df_merged['Spike'] == 0)]
         low_bend_w_neuron = self.df_merged[
             (self.df_merged['Bending_Binary'] == 0) &
-            (self.df_merged['Spikes'] >= 1)]
+            (self.df_merged['Spike'] >= 1)]
 
         return high_bend_w_neuron, high_bend_wo_neuron, low_bend_w_neuron
 

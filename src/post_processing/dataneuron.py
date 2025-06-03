@@ -36,20 +36,45 @@ class DataNeuron:
         FileNotFoundError: If the file path does not exist.
     """
     def __init__(self,
-                 neuron_csv_path: str,
-                 original_freq: int) -> None:
-        Val.validate_path(neuron_csv_path, file_types=[".csv"])
+                neuron_path: str,
+                original_freq: int) -> None:
+        """
+        Initialize DataNeuron with neuron data from CSV or Excel.
+
+        Args:
+            neuron_path (str): Path to the neuron data file (.csv or .xlsx).
+            original_freq (int): The original frequency of the data.
+
+        Raises:
+            ValueError: If the provided frequency is not a positive integer or if the required columns are not present in the file.
+            FileNotFoundError: If the file path does not exist.
+        """
+        # Accept both CSV and XLSX
+        allowed_exts = [".csv", ".xlsx"]
+        Val.validate_path_exists(neuron_path)
+        Val.validate_path(neuron_path, file_types=allowed_exts)
         Val.validate_type(original_freq, int, "Original Frequency")
         Val.validate_positive(original_freq, "Original Frequency")
 
-        self.df = pd.read_csv(neuron_csv_path)
+        ext = os.path.splitext(neuron_path)[1].lower()
+        if ext == ".csv":
+            try:
+                df = pd.read_csv(neuron_path, sep=",")
+            except pd.errors.ParserError:
+                df = pd.read_csv(neuron_path, sep=";")
+        elif ext == ".xlsx":
+            df = pd.read_excel(neuron_path)
+        else:
+            raise ValueError(f"Unsupported file extension: {ext}")
+
+        self.df = df
         self.original_freq = original_freq
         self.downsampled_df = None
 
         # Define required columns with "OR" groups
         required_columns = [
             ["Time"],  # Time column must exist
-            ["Spikes", "Neuron"]  # At least one of these must exist
+            ["Spike", "Neuron"]  # At least one of these must exist
         ]
         # Validate and get column mappings for required columns
         column_mapping = Val.validate_dataframe(
@@ -73,8 +98,8 @@ class DataNeuron:
         # If IFF column is missing, calculate it
         if 'IFF' not in self.df.columns:
             self.calculate_iff()
-            
-        print(f"Column dtypes: {self.df.dtypes}")
+
+        self.df['IFF'] = pd.to_numeric(self.df['IFF'], errors='coerce')
 
     def calculate_iff(self) -> None:
         """
@@ -92,7 +117,7 @@ class DataNeuron:
         """
         # Create Instantaneous Frequency Firing (IFF):
         # 1 divided by the difference between the current time and last spike time
-        spikes_loc = self.df[self.df['Spikes'] == 1].index
+        spikes_loc = self.df[self.df['Spike'] == 1].index
         self.df["IFF"] = np.nan
 
         for i in range(1, len(spikes_loc)):
@@ -150,7 +175,7 @@ class DataNeuron:
         filled_df = full_df.merge(self.df, on='Time', how="left")
 
         # Fill missing Spikes with 0
-        filled_df['Spikes'] = filled_df['Spikes'].fillna(0).astype(int)
+        filled_df['Spike'] = filled_df['Spike'].fillna(0).astype(int)
 
         # Fill IFF column if it exists
         if 'IFF' in filled_df.columns:
@@ -191,15 +216,14 @@ class DataNeuron:
         # Apply a rolling window with a maximum function to preserve binary components
         downsampled_df = pd.DataFrame()
 
-        self.df['IFF'] = pd.to_numeric(self.df['IFF'], errors='coerce')
         # Downsample the iff/freq column by picking the maximum value in the window
         downsampled_df['IFF'] = \
             self.df['IFF'].rolling(window=downsample_factor,
                                              min_periods=1).max()
 
         # Downsample the spikes column by summing the values in the window
-        downsampled_df['Spikes'] = \
-            self.df['Spikes'].rolling(window=downsample_factor,
+        downsampled_df['Spike'] = \
+            self.df['Spike'].rolling(window=downsample_factor,
                                                 min_periods=1).sum()
 
         # Downsample the DataFrame by selecting every downsample_factor-th row
@@ -236,7 +260,7 @@ class DataNeuron:
 
         # Fill the data up to a target length by forward filling the data
         self.downsampled_df = self.downsampled_df.reindex(range(target_length))
-        self.downsampled_df['Spikes'].fillna(0, inplace=True)
+        self.downsampled_df['Spike'].fillna(0, inplace=True)
         self.downsampled_df['IFF'].ffill(inplace=True)
 
         return self.downsampled_df

@@ -37,7 +37,7 @@ class TestPlottingPlotly(unittest.TestCase):
         self.dlc_data.get_bending_coefficients()
         self.dlc_data.apply_homography()
         # Set up mock DataNeuron obj
-        self.neuron_data = DataNeuron("tests/mock_neuron_data.xlsx", original_freq=10)
+        self.neuron_data = DataNeuron("tests/mock_neuron_data.csv", original_freq=10)
         self.neuron_data.downsample(3)
         # Set up mock MergedData obj
         self.merged_data = MergedData(

@@ -63,7 +63,7 @@ class PlottingPlotly():
     Example:
         fig = PlottingPlotly.plot_scatter_interactive(
             merged_data, x_col="x", y_col="y", homography_points=points,
-            size_col="size", color_col="Spikes"
+            size_col="size", color_col="Spike"
         )
     """
     @staticmethod
@@ -507,8 +507,8 @@ class PlottingPlotly():
         scaler = MinMaxScaler(feature_range=(1, 30))
         df["scaled_size"] = scaler.fit_transform(df[[size_col]]) * 5
 
-        if color_col == "Spikes":
-            color_map = df["Spikes"].apply(
+        if color_col == "Spike":
+            color_map = df["Spike"].apply(
                 lambda x: 'blue' if x > 0 else 'grey')
         else:
             # Try to get the colormap directly by name (from matplotlib or plotly-compatible strings)
@@ -553,7 +553,7 @@ class PlottingPlotly():
             history_y.append(current_row[y_col])
             history_size.append(current_row["scaled_size"])
             history_color.append(
-                color_map[frame_idx] if color_col != "Spikes" else color_map.iloc[frame_idx]
+                color_map[frame_idx] if color_col != "Spike" else color_map.iloc[frame_idx]
             )
 
             # Plot all points up to current frame
@@ -561,7 +561,7 @@ class PlottingPlotly():
                        alpha=0.7, edgecolors=None)
 
             # Add legend or colorbar
-            if color_col == "Spikes":
+            if color_col == "Spike":
                 legend_elements = [
                     Line2D([0], [0], marker='o', color='w',
                            markerfacecolor='blue', markersize=10,
@@ -803,8 +803,8 @@ class PlottingPlotly():
         scaled_size = scaler.fit_transform(
             df[[size_col]]).flatten()  # Flatten to 1D array
 
-        if color_col == 'Spikes':
-            df['Color'] = df['Spikes'].apply(
+        if color_col == 'Spike':
+            df['Color'] = df['Spike'].apply(
                 lambda x: 'Spike' if x > 0 else 'No Spike')
             fig = px.scatter(
                 df, x=x_col, y=y_col,
@@ -1063,8 +1063,8 @@ class PlottingPlotly():
         sizes = norm(df[size_col]) * 200
 
         # Handle colors
-        if color_col == 'Spikes':
-            colors = df['Spikes'].apply(lambda x: 'blue' if x > 0 else 'grey')
+        if color_col == 'Spike':
+            colors = df['Spike'].apply(lambda x: 'blue' if x > 0 else 'grey')
         else:
             color_norm = plt.Normalize(
                 df[color_col].min(), df[color_col].max())
@@ -1076,7 +1076,7 @@ class PlottingPlotly():
                              alpha=0.5, edgecolors=None, linewidth=0.5)
 
         # Add legend
-        if color_col == 'Spikes':
+        if color_col == 'Spike':
             legend_elements = [
                 Line2D([0], [0], marker='o', color='w',
                        markerfacecolor='blue', markersize=10, label='Spike'),

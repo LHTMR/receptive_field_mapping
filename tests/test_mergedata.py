@@ -18,9 +18,9 @@ class TestMergedData(unittest.TestCase):
         })
 
         # Mock DataNeuron
-        self.mock_neuron = DataNeuron("tests/mock_neuron_data.xlsx", original_freq=10)
+        self.mock_neuron = DataNeuron("tests/mock_neuron_data.csv", original_freq=10)
         self.mock_neuron.downsampled_df = pd.DataFrame({
-            'Spikes': [0, 1, 0],
+            'Spike': [0, 1, 0],
             'IFF': [0, 5, 0]
         })
 
@@ -70,7 +70,7 @@ class TestMergedData(unittest.TestCase):
         merged_df = self.merged_data._merge()
         self.assertIsInstance(merged_df, pd.DataFrame)
         self.assertIn('Bending_Coefficient', merged_df.columns)
-        self.assertIn('Spikes', merged_df.columns)
+        self.assertIn('Spike', merged_df.columns)
         self.assertIn('IFF', merged_df.columns)
 
     def test_clean(self):
@@ -79,7 +79,7 @@ class TestMergedData(unittest.TestCase):
         self.assertIsInstance(cleaned_df, pd.DataFrame)
         self.assertTrue(
             all((cleaned_df['Bending_Binary'] == 1) |
-                (cleaned_df['Spikes'] != 0))
+                (cleaned_df['Spike'] != 0))
         )
 
     def test_threshold_data(self):
@@ -91,7 +91,7 @@ class TestMergedData(unittest.TestCase):
 
         filtered_df = self.merged_data.threshold_data(bending=False,
                                                       spikes=True)
-        self.assertTrue(all(filtered_df['Spikes'] != 0))
+        self.assertTrue(all(filtered_df['Spike'] != 0))
 
         unfiltered_df = self.merged_data.threshold_data(bending=False,
                                                         spikes=False)
@@ -116,11 +116,11 @@ class TestMergedData(unittest.TestCase):
         self.assertIsInstance(low_bend_w_neuron, pd.DataFrame)
 
         self.assertTrue(all(high_bend_w_neuron['Bending_Binary'] == 1))
-        self.assertTrue(all(high_bend_w_neuron['Spikes'] == 1))
+        self.assertTrue(all(high_bend_w_neuron['Spike'] == 1))
         self.assertTrue(all(high_bend_wo_neuron['Bending_Binary'] == 1))
-        self.assertTrue(all(high_bend_wo_neuron['Spikes'] == 0))
+        self.assertTrue(all(high_bend_wo_neuron['Spike'] == 0))
         self.assertTrue(all(low_bend_w_neuron['Bending_Binary'] == 0))
-        self.assertTrue(all(low_bend_w_neuron['Spikes'] == 1))
+        self.assertTrue(all(low_bend_w_neuron['Spike'] == 1))
 
     @patch('src.post_processing.mergeddata.MergedData._save_data')
     def test_save_full_data_csv(self, mock_save_data):

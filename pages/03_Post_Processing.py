@@ -8,6 +8,8 @@ from src.post_processing.outlierimputer import OutlierImputer
 from src.post_processing.datadlc import DataDLC
 from src.post_processing import processing_utils
 import streamlit as st
+import json
+import os
 
 plotly_cmaps = processing_utils.get_all_plotly_cmaps()
 matplotlib_cmaps = processing_utils.get_all_matplotlib_cmaps()
@@ -80,7 +82,7 @@ with tab1:
             select any of the other models. The plots will then show the derivative
             of the square and monofilament points before and after the imputation.  
             If there are still spikes above 20-50 for the square, consider
-            adjusting the standard deviation threshold to get it down to the 10s
+            adjusting the standard deviation threshold to get it down to the 10-20s
             in the after plot. The filament is considerably harder to impute for,
             so just try to get it around or below 100. Lower is better.
             """)
@@ -150,6 +152,12 @@ with tab1:
             )
             st.session_state.imputed_square = True
             st.success("Outliers imputed successfully for the square points!")
+            
+            # load the best models used for square points in latest_square.json
+            with open("latest_square.json", "r") as f:
+                best_models_square = json.load(f)
+            st.info("The best models used per column are:")
+            st.json(best_models_square)
         else:
             st.info("""
                 Square points already imputed. Skipping this step.
@@ -167,8 +175,18 @@ with tab1:
             )
             st.session_state.imputed_filament = True
             st.success("Outliers imputed successfully for the filament points!")
+
+            # load the best models used for filament points in latest_filament.json
+            with open("latest_filament.json", "r") as f:
+                best_models_filament = json.load(f)
+            st.info("The best models used per column are:")
+            st.json(best_models_filament)
         else:
-            st.info("Filament points already imputed. Skipping this step.")
+            st.info("""
+                Filament points already imputed. Skipping this step.
+                Plotting comparisons of the imputations
+                result can still be done.
+                """)
 
         with st.expander("Plotting Imputing Comparisons", expanded=False):
             if st.checkbox("Plot Square Derivative Outlier Comparison"):
@@ -188,6 +206,8 @@ with tab1:
                     fig_square_after = px.line(
                         df_square_derivative_after, title="Square Derivative After Imputation")
                     fig_square_after.update_layout(title_x=0.5)
+                    fig_square_after.update_yaxes(title_text="derivative value")
+                    fig_square_after.update_xaxes(title_text="frame")
                     st.plotly_chart(fig_square_after, use_container_width=True)
                 except Exception as e:
                     st.error(f"Error plotting square derivative after imputation: {e}")
@@ -209,9 +229,25 @@ with tab1:
                     fig_monofil_after = px.line(
                         df_monofil_derivative_after, title="Monofilament Derivative After Imputation")
                     fig_monofil_after.update_layout(title_x=0.5)
+                    fig_monofil_after.update_yaxes(title_text="derivative value")
+                    fig_monofil_after.update_xaxes(title_text="frame")
                     st.plotly_chart(fig_monofil_after, use_container_width=True)
                 except Exception as e:
                     st.error(f"Error plotting monofilament derivative after imputation: {e}")
+
+        with st.expander("Create relabeled video", expanded=False):
+            processing_utils.assign_video_path(key="get_video_key_dlc")
+            
+            if st.checkbox("Show Relabeled Video"):
+                try:
+                    if "labeled_video_path" in st.session_state:
+                        vid_bit = PlottingPlotly.generate_labeled_video(
+                            st.session_state.data_dlc, 
+                            st.session_state.labeled_video_path
+                            )
+                        st.video(vid_bit)
+                except Exception as e:
+                    st.error(f"Error generating relabeled video: {e}")
 
         st.markdown("""
             #### Bending Coefficients
@@ -342,24 +378,73 @@ with tab1:
 with tab2:
     st.header("Upload Files & Inputs")
 
+    st.markdown("""
+    #### Neuron Data
+
+    **Supported file types:**  
+    - `.xlsx` (Excel)  
+    - `.csv` (comma or semicolon separated)
+
+    **Required columns (not case sensitive):**
+    - One column containing 'Time'
+    - One column containing either 'Spike' or 'Neuron'
+    - (Optional) column containing 'IFF' (Instantaneous Frequency Firing)
+
+    **The file must have the column names as the first row, and data starting immediately after.**
+
+    **Correct format example:**
+
+    ```text
+    Time_s      Spikes_V    Freq_HZ
+    1.38035     0           #NUM!
+    1.38355     1           298.5074768
+    ````
+
+    **Bad format example (do NOT use):**
+
+    ```text
+                Spikes      Freq
+    Time        Value       Value
+    s           V           Hz
+    1.38035     0           #NUM!
+    1.38355     1           298.5074768
+    ```
+
+    **Avoid:**
+    * Multiple header rows (e.g., units or descriptions above column names)
+    * Empty/comment lines before data
+    * Merged cells or multi-level headers
+    """)
+
     # File uploader for Neuron data
     neuron_file = st.file_uploader(
-        "Upload Neuron Data File that was collected during the video", type=["csv"])
+        "Upload Neuron Data File that was collected during the video", type=["xlsx", "csv"])
     if neuron_file is not None:
         st.success(f"Uploaded Neuron file: {neuron_file.name}")
 
-        # Save the uploaded file to a temporary location
-        with NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+        # Get the file extension
+        _, ext = os.path.splitext(neuron_file.name)
+        ext = ext.lower()
+
+        # Save the uploaded file to a temporary location with the correct extension
+        with NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
             temp_file.write(neuron_file.read())
             temp_file_path = temp_file.name
 
-        # Read the Excel file using pandas
+        # Read the file using pandas based on extension
         try:
-            df_neuron = pd.read_csv(temp_file_path)
-            # Show df_neuron header
+            if ext == ".csv":
+                try:
+                    df_neuron = pd.read_csv(temp_file_path, sep=",")
+                except pd.errors.ParserError:
+                    df_neuron = pd.read_csv(temp_file_path, sep=";")
+            elif ext == ".xlsx":
+                df_neuron = pd.read_excel(temp_file_path)
+            else:
+                raise ValueError("Unsupported file type.")
             st.write(df_neuron)
         except Exception as e:
-            st.error(f"Error reading Excel file: {e}")
+            st.error(f"Error reading neuron data file: {e}")
 
     # Fetch inputs for original frequency and then target frequency of video fps
     col1, col2 = st.columns(2)
@@ -404,7 +489,7 @@ with tab2:
                     # Make interactive dual-axis plot of neuron data
                     fig = PlottingPlotly.plot_dual_y_axis(
                         df=st.session_state.neuron_data.df,
-                        columns=["Spikes", "IFF"],
+                        columns=["Spike", "IFF"],
                         title=title,
                         xlabel=x_label,
                         ylabel_1=y_label_1,
@@ -445,7 +530,7 @@ with tab2:
                     # Make interactive dual-axis plot of downsampled neuron data
                     fig = PlottingPlotly.plot_dual_y_axis(
                         df=st.session_state.neuron_data.downsampled_df,
-                        columns=["Spikes", "IFF"],
+                        columns=["Spike", "IFF"],
                         title=title,
                         xlabel=x_label,
                         ylabel_1=y_label_1,
@@ -467,7 +552,8 @@ with tab3:
     st.markdown("""
         #### Merging
         The DLC data and the neuron data are merged together based on the time column.
-        The merged data will be used for further analysis and visualization.
+        The merged data will be used for further analysis and visualization, such as
+        creating the receptive field map.
         The bending coefficient threshold input is for just that, to filter a
         new Bending_Binary column that will be used for the merging process,
         as well as cleaning of later plots for visualization.
@@ -496,10 +582,10 @@ with tab3:
             with col1:
                 # get boolean input for thresholding
                 bending = st.checkbox(
-                    "Threshold on Bending", value=False, key="merged_bending")
+                    "Filter by physical contact", value=False, key="merged_bending")
             with col2:
                 spikes = st.checkbox(
-                    "Threshold on Spikes", value=False, key="merged_spikes")
+                    "Filter by neuron spikes", value=False, key="merged_spikes")
             cleaned_df = st.session_state.merged_data.threshold_data(
                 bending=bending, spikes=spikes)
             st.write(cleaned_df)
@@ -517,7 +603,9 @@ with tab3:
             #### Plotting Merging
             The plot below is meant to visualize the merging of
             neuron data and the labeled data together. Zoom in closer
-            if necessary.
+            if necessary. The Spikes_Filled column should primarily just
+            be used here as processed data, as it was created just for the
+            merging.
             """)
         with st.expander("Plotting", expanded=False):
             # Get customization inputs for the plot
@@ -556,18 +644,18 @@ with tab3:
             The Scatter Plot animation is generated by plotting the
             monofilament points in the transformed space and modified with
             the input column for size and color. \n
-            The rows can also be thresholded to plot only the points
-            that are above the threshold for the bending coefficient and/or
-            non-zero for the neuron spikes.
+            The data rows used for the plotting can also be thresholded,
+            to plot only the points that are above the threshold for the
+            bending coefficient and/or non-zero for the neuron spikes.
             """)
         with st.expander("Generate Scatter Plot Animation", expanded=False):
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                bending = st.checkbox("Threshold on Bending",
+                bending = st.checkbox("Filter by physical contact",
                                       value=True,
                                       key="rf_mapping_bending")
-                spikes = st.checkbox("Threshold on Spikes",
+                spikes = st.checkbox("Filter by neuron spikes",
                                      value=True,
                                      key="rf_mapping_spikes")
                 cmap = st.selectbox("Colormap", sorted(
@@ -621,7 +709,9 @@ with tab3:
                     st.error(f"Error generating Scatter Plot Animation: {e}")
 
         st.markdown("""
-            #### KDE / Scatter Plot (interactive)
+            #### Receptive Field Mapping (KDE) / Scatter Plot (interactive)
+            The KDE plot is functionally the RF Map, created by plotting the
+            density of points within a space.
             The KDE / Scatter plots are generated by plotting the 
             monofilament points in the transformed space and modified with
             the input column for size and color. \n
@@ -629,7 +719,7 @@ with tab3:
             that are above the threshold for the bending coefficient and/or
             non-zero for the neuron spikes.
             """)
-        with st.expander("Plot KDE / Scatter", expanded=False):
+        with st.expander("Plot RF Map (KDE) / Scatter", expanded=False):
             col1, col2, col3, col4 = st.columns(4)
 
             with col1:
@@ -674,7 +764,7 @@ with tab3:
                     "Percentage threshold for Bandwidth", value=0.05, min_value=0.01,
                     step=0.05, key="kde_scatter_bw_threshold")
 
-            if st.checkbox("Show KDE Density (interactive)"):
+            if st.checkbox("Show RF Mapping (KDE) (interactive)"):
                 try:
                     fig_kde = PlottingPlotly.plot_kde_density_interactive(
                         st.session_state.merged_data,
@@ -740,7 +830,7 @@ with tab3:
                                              min_value=1, step=1, key="fig_height_2")
                     figsize = (width, height)
 
-                if st.checkbox("Show KDE Plot (background frame)"):
+                if st.checkbox("Show RF Mapping (KDE) (background frame)"):
                     try:
                         fig, ax = PlottingPlotly.plot_kde_density(
                             merged_data=st.session_state.merged_data,
@@ -786,7 +876,7 @@ with tab3:
             #### Scrolling Video Overlay
             The scrolling video overlay is generated by plotting the line plots
             of two target columns +- 50 frames from the current frame in the
-            original video. \n
+            original video used to create the labels. \n
             The threshold for the bending coefficient is also shown visually
             if it is one of the target columns.
             """)

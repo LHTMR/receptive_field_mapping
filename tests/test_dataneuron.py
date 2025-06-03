@@ -14,11 +14,26 @@ class TestDataNeuron(unittest.TestCase):
         self.data_neuron = DataNeuron(self.mock_csv_file, original_freq=10)
 
     def test_init(self):
-        # Test initialization
-        self.assertIsInstance(self.data_neuron, DataNeuron)
-        self.assertEqual(self.data_neuron.original_freq, 10)
-        self.assertIsInstance(self.data_neuron.df, pd.DataFrame)
-        self.assertIsNone(self.data_neuron.downsampled_df)
+        # Test initialization with CSV
+        data_neuron_csv = DataNeuron(self.mock_csv_file, original_freq=10)
+        self.assertIsInstance(data_neuron_csv, DataNeuron)
+        self.assertEqual(data_neuron_csv.original_freq, 10)
+        self.assertIsInstance(data_neuron_csv.df, pd.DataFrame)
+        self.assertIsNone(data_neuron_csv.downsampled_df)
+
+        # Test initialization with XLSX
+        # Save mock_data as a temporary xlsx file
+        xlsx_path = "tests/mock_neuron_data.xlsx"
+        self.mock_data.to_excel(xlsx_path, index=False)
+        try:
+            data_neuron_xlsx = DataNeuron(xlsx_path, original_freq=10)
+            self.assertIsInstance(data_neuron_xlsx, DataNeuron)
+            self.assertEqual(data_neuron_xlsx.original_freq, 10)
+            self.assertIsInstance(data_neuron_xlsx.df, pd.DataFrame)
+            self.assertIsNone(data_neuron_xlsx.downsampled_df)
+        finally:
+            if os.path.exists(xlsx_path):
+                os.remove(xlsx_path)
 
     def test_validate_required_columns(self):
         # Test that required columns are validated during initialization
@@ -62,8 +77,8 @@ class TestDataNeuron(unittest.TestCase):
         # Check that the DataFrame has been filled correctly
         np.testing.assert_array_almost_equal(self.data_neuron.df["Time"].values,
                                              self.mock_data["Time"])
-        np.testing.assert_array_almost_equal(self.data_neuron.df["Spikes"].values,
-                                             self.mock_data["Spikes"])
+        np.testing.assert_array_almost_equal(self.data_neuron.df["Spike"].values,
+                                             self.mock_data["Spike"])
         np.testing.assert_array_almost_equal(self.data_neuron.df["IFF"].values,
                                              self.mock_data["IFF"])
 
@@ -78,7 +93,7 @@ class TestDataNeuron(unittest.TestCase):
         # Check the downsampled DataFrame
         self.assertEqual(len(downsampled_df), expected_length)
         self.assertIn("IFF", downsampled_df.columns)
-        self.assertIn("Spikes", downsampled_df.columns)
+        self.assertIn("Spike", downsampled_df.columns)
 
     @parameterized.expand([
         ("negative_target_freq", -5, ValueError),
@@ -103,7 +118,7 @@ class TestDataNeuron(unittest.TestCase):
         self.assertEqual(len(filled_df), 10)
         # Check that the new rows are filled with the last IFF and Spikes as 0
         self.assertTrue(np.all(filled_df["IFF"].iloc[len_df:] == last_iff))
-        self.assertTrue(np.all(filled_df["Spikes"].iloc[len_df:] == 0))
+        self.assertTrue(np.all(filled_df["Spike"].iloc[len_df:] == 0))
 
 
 if __name__ == "__main__":
