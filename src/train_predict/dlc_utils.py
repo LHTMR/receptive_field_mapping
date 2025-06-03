@@ -582,22 +582,21 @@ def run_retraining(config_path, train_folder,
         deeplabcut.create_training_dataset(config_path,
                                            num_shuffles=1,
                                            weight_init=None,
-                                           net_type="top_down_resnet_50",
+                                           net_type="top_down_resnet_50", # Change this for new model!!
                                            userfeedback=False)
         st.success("📦 Training dataset created!")
     except Exception as e:
         st.error(f"❌ Failed to create training dataset: {e}")
         st.stop()  # Also use st.stop here for consistency
 
-    # Change this for new model!!
     try:
         detector_path = os.path.join(
         train_folder,
-        "snapshot-detector-200.pt"   
+        "snapshot-detector-200.pt"   # Change this for new model!!
         )
         snapshot_path = os.path.join(
         train_folder,
-        "snapshot-075.pt"   
+        "snapshot-075.pt"   # Change this for new model!!
         )
         st.info("🧠 Starting model training...")
         deeplabcut.train_network(config_path,
