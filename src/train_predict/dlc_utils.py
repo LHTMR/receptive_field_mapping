@@ -228,8 +228,8 @@ def clean_snapshots(train_folder: str) -> None:
     Deletes unnecessary snapshot files from the training folder, keeping only selected ones.
 
     Specifically retains:
-    - 'snapshot-075.pt'
-    - 'snapshot-detector-200.pt'
+    - 'snapshot-best-040.pt'
+    - 'snapshot-detector-best-170.pt'
 
     Args:
         train_folder (str): Path to the training folder containing snapshot files.
@@ -241,7 +241,7 @@ def clean_snapshots(train_folder: str) -> None:
         Streamlit success or warning messages depending on the result.
     """
     # Change this for new model!!
-    keep_files = {"snapshot-075.pt", "snapshot-detector-200.pt"}
+    keep_files = {"snapshot-best-040.pt", "snapshot-detector-best-170.pt"}
 
     if os.path.exists(train_folder):
         for file in os.listdir(train_folder):
@@ -582,21 +582,21 @@ def run_retraining(config_path, train_folder,
         deeplabcut.create_training_dataset(config_path,
                                            num_shuffles=1,
                                            weight_init=None,
-                                           net_type="top_down_resnet_50", # Change this for new model!!
+                                           net_type="top_down_hrnet_w48", # Change this for new model!!
                                            userfeedback=False)
         st.success("📦 Training dataset created!")
     except Exception as e:
         st.error(f"❌ Failed to create training dataset: {e}")
-        st.stop()  # Also use st.stop here for consistency
+        st.stop()
 
     try:
         detector_path = os.path.join(
         train_folder,
-        "snapshot-detector-200.pt"   # Change this for new model!!
+        "snapshot-detector-best-170.pt"   # Change this for new model!!
         )
         snapshot_path = os.path.join(
         train_folder,
-        "snapshot-075.pt"   # Change this for new model!!
+        "snapshot-best-040.pt"   # Change this for new model!!
         )
         st.info("🧠 Starting model training...")
         deeplabcut.train_network(config_path,
@@ -641,7 +641,8 @@ def predict_and_show_labeled_video(config_path: str,
         Exception: If any error occurs during the analysis, labeling, or video display, an error message is shown in Streamlit.
     """
     try:
-        st.info("📈 Running predictions and generating the labeled video with imputed outliers. Please wait...")
+        st.info("📈 Running predictions and generating the labeled video. Please wait...") 
+        st.write("This video include imputed outlier computations with default value, this can be changed in the Post Processing page")
         deeplabcut.analyze_videos(config_path, [video_path], shuffle=1)
         st.success("🎉 New predictions generated!")
 
