@@ -890,7 +890,7 @@ with tab3:
                 scroll_columns = st.multiselect(
                     "Select two columns for the scrolling plot",
                     available_columns,
-                    default=["Bending_ZScore", "Spikes"]
+                    default=["Bending_ZScore", "Spike"]
                 )
 
                 if len(scroll_columns) != 2:
