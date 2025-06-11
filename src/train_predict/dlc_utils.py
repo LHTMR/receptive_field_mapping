@@ -228,8 +228,8 @@ def clean_snapshots(train_folder: str) -> None:
     Deletes unnecessary snapshot files from the training folder, keeping only selected ones.
 
     Specifically retains:
-    - 'snapshot-best-040.pt'
-    - 'snapshot-detector-best-170.pt'
+    - 'snapshot-100.pt'
+    - 'snapshot-detector-200.pt'
 
     Args:
         train_folder (str): Path to the training folder containing snapshot files.
@@ -241,7 +241,7 @@ def clean_snapshots(train_folder: str) -> None:
         Streamlit success or warning messages depending on the result.
     """
     # Change this for new model!!
-    keep_files = {"snapshot-best-040.pt", "snapshot-detector-best-170.pt"}
+    keep_files = {"snapshot-100.pt", "snapshot-detector-200.pt"}
 
     if os.path.exists(train_folder):
         for file in os.listdir(train_folder):
@@ -580,10 +580,11 @@ def run_retraining(config_path, train_folder,
     try:       
         st.info("🛠️ Creating training dataset...")
         deeplabcut.create_training_dataset(config_path,
-                                           num_shuffles=1,
-                                           weight_init=None,
-                                           net_type="top_down_hrnet_w48", # Change this for new model!!
-                                           userfeedback=False)
+                                    num_shuffles=1,
+                                    weight_init=None,
+                                    net_type="top_down_hrnet_w48",
+                                    detector_type="fasterrcnn_resnet50_fpn_v2",
+                                    userfeedback=False)
         st.success("📦 Training dataset created!")
     except Exception as e:
         st.error(f"❌ Failed to create training dataset: {e}")
@@ -592,11 +593,11 @@ def run_retraining(config_path, train_folder,
     try:
         detector_path = os.path.join(
         train_folder,
-        "snapshot-detector-best-170.pt"   # Change this for new model!!
+        "snapshot-detector-200.pt"   # Change this for new model!
         )
         snapshot_path = os.path.join(
         train_folder,
-        "snapshot-best-040.pt"   # Change this for new model!!
+        "snapshot-100.pt"   # Change this for new model!
         )
         st.info("🧠 Starting model training...")
         deeplabcut.train_network(config_path,
