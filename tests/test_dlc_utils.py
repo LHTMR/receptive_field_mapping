@@ -280,11 +280,11 @@ class TestDLCUtils(unittest.TestCase):
     def test_clean_snapshots_when_files_exist(self, mock_st, mock_remove):
         with tempfile.TemporaryDirectory() as tmp_dir:
             # Create snapshot files
-            snapshot_075 = os.path.join(tmp_dir, "snapshot-075.pt")
+            snapshot_100 = os.path.join(tmp_dir, "snapshot-100.pt")
             snapshot_200 = os.path.join(tmp_dir, "snapshot-detector-200.pt")
             snapshot_extra = os.path.join(tmp_dir, "snapshot-extra.pt")
 
-            for path in [snapshot_075, snapshot_200, snapshot_extra]:
+            for path in [snapshot_100, snapshot_200, snapshot_extra]:
                 with open(path, 'w'):
                     pass
 
@@ -300,9 +300,9 @@ class TestDLCUtils(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
 
             # Create only the files that should be kept
-            snapshot_075 = os.path.join(tmp_dir, "snapshot-075.pt")
+            snapshot_100 = os.path.join(tmp_dir, "snapshot-100.pt")
             snapshot_200 = os.path.join(tmp_dir, "snapshot-detector-200.pt")
-            with open(snapshot_075, 'w'), open(snapshot_200, 'w'):
+            with open(snapshot_100, 'w'), open(snapshot_200, 'w'):
                 pass
 
             # Run clean_snapshots
