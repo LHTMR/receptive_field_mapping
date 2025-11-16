@@ -69,6 +69,10 @@ To remove the environment later:
 conda remove --name your-env-name --all
 ```
 
+### 7. Optional: Download demo data and pre-trained model
+[data](https://liuonline-my.sharepoint.com/:u:/g/personal/sarmc72_liu_se/EZ_nJPTfm7FMrZ3hTrzaz7kBcK6LrjD6tUtWb5skWR0IjA?e=FIBF7n)
+
+[pre-trained model](https://liuonline-my.sharepoint.com/:u:/g/personal/sarmc72_liu_se/EeBX-65JP4BNlZsRyyf4u4QBfoycTgk2M5Fa2nIZF2Se3A?e=Nt4FIq)
 
 ## Authors
 Gabriel Läckgren & Erik Svensson
