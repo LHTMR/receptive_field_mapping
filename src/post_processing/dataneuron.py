@@ -50,7 +50,7 @@ class DataNeuron:
             FileNotFoundError: If the file path does not exist.
         """
         # Accept both CSV and XLSX
-        allowed_exts = [".csv", ".xlsx"]
+        allowed_exts = [".csv", ".xlsx", ".txt"]
         Val.validate_path_exists(neuron_path)
         Val.validate_path(neuron_path, file_types=allowed_exts)
         Val.validate_type(original_freq, int, "Original Frequency")
@@ -64,6 +64,8 @@ class DataNeuron:
                 df = pd.read_csv(neuron_path, sep=";")
         elif ext == ".xlsx":
             df = pd.read_excel(neuron_path)
+        elif ext == ".txt":
+            df = pd.read_csv(neuron_path, sep="\t")
         else:
             raise ValueError(f"Unsupported file extension: {ext}")
 

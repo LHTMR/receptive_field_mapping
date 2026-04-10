@@ -35,6 +35,14 @@ class TestDataNeuron(unittest.TestCase):
             if os.path.exists(xlsx_path):
                 os.remove(xlsx_path)
 
+        # Test initialization with tab-separated TXT
+        txt_path = "tests/mock_neuron_data.txt"
+        data_neuron_txt = DataNeuron(txt_path, original_freq=10)
+        self.assertIsInstance(data_neuron_txt, DataNeuron)
+        self.assertEqual(data_neuron_txt.original_freq, 10)
+        self.assertIsInstance(data_neuron_txt.df, pd.DataFrame)
+        self.assertIsNone(data_neuron_txt.downsampled_df)
+
     def test_validate_required_columns(self):
         # Test that required columns are validated during initialization
         with patch("src.components.validation.Validation.validate_dataframe") as mock_validate:
