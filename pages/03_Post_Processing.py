@@ -25,10 +25,18 @@ tab1, tab2, tab3 = st.tabs(
 # Tab for processing labeled DLC data
 with tab1:
     st.header("Manage File")
-
     if "h5_path" in st.session_state:
-        st.session_state.data_dlc = DataDLC(st.session_state.h5_path)
-        st.success("DLC data processed successfully!")
+        if os.path.exists(st.session_state.h5_path):
+            st.session_state.data_dlc = DataDLC(st.session_state.h5_path)
+            st.success("DLC data processed successfully!")
+        else:
+            st.error(
+                f"H5 file not found: `{st.session_state.h5_path}`. "
+                "The file may have been deleted. Re-run inference on page 2, "
+                "or refresh this page to upload manually."
+            )
+            del st.session_state["h5_path"]
+            st.session_state.data_dlc = None
 
     else:
         # File uploader for DLC data
