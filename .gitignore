@@ -162,3 +162,7 @@ cython_debug/
 # Model performance logs
 latest_square.json
 latest_filament.json
+
+# Claude context and instructions
+PLANNING_CONTEXT.md
+CLAUDE.md

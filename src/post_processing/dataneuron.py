@@ -127,9 +127,9 @@ class DataNeuron:
             self.df.loc[spikes_loc[i], "IFF"] = 1 / diff
 
         # fill the NaN values with the previous non-NaN value
-        self.df["IFF"].fillna(method='ffill', inplace=True)
+        self.df["IFF"] = self.df["IFF"].ffill()
         # fill the remaining NaN values with 0
-        self.df["IFF"].fillna(0, inplace=True)
+        self.df["IFF"] = self.df["IFF"].fillna(0)
 
     def _get_frequency(self) -> int:
         """
@@ -179,8 +179,8 @@ class DataNeuron:
 
         # Fill IFF column if it exists
         if 'IFF' in filled_df.columns:
-            filled_df['IFF'].fillna(method='ffill', inplace=True)
-            filled_df['IFF'].fillna(0, inplace=True)
+            filled_df['IFF'] = filled_df['IFF'].ffill()
+            filled_df['IFF'] = filled_df['IFF'].fillna(0)
 
         self.df = filled_df
 
@@ -260,7 +260,7 @@ class DataNeuron:
 
         # Fill the data up to a target length by forward filling the data
         self.downsampled_df = self.downsampled_df.reindex(range(target_length))
-        self.downsampled_df['Spike'].fillna(0, inplace=True)
-        self.downsampled_df['IFF'].ffill(inplace=True)
+        self.downsampled_df['Spike'] = self.downsampled_df['Spike'].fillna(0)
+        self.downsampled_df['IFF'] = self.downsampled_df['IFF'].ffill()
 
         return self.downsampled_df
