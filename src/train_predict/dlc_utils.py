@@ -227,9 +227,13 @@ def clean_snapshots(train_folder: str) -> None:
     """
     Deletes unnecessary snapshot files from the training folder, keeping only selected ones.
 
-    Specifically retains:
-    - 'snapshot-100.pt'
-    - 'snapshot-detector-200.pt'
+    Attempts to retain the hardcoded targets:
+    - 'snapshot-100.pt' (pose model)
+    - 'snapshot-detector-200.pt' (detector model)
+
+    If a target file is missing (e.g. training stopped early), falls back to the
+    latest available snapshot of the same type instead of deleting it. A Streamlit
+    warning is shown for each fallback so the user knows which file was kept.
 
     Args:
         train_folder (str): Path to the training folder containing snapshot files.
@@ -238,17 +242,55 @@ def clean_snapshots(train_folder: str) -> None:
         None
 
     Displays:
-        Streamlit success or warning messages depending on the result.
+        Streamlit success message if all target files were present, warning message(s)
+        if fallbacks were used, or a warning if the training folder was not found.
     """
     # Change this for new model!!
     keep_files = {"snapshot-100.pt", "snapshot-detector-200.pt"}
 
     if os.path.exists(train_folder):
-        for file in os.listdir(train_folder):
-            if file.startswith("snapshot-") and file.endswith(".pt")\
-                  and file not in keep_files:
+        all_snapshots = [f for f in os.listdir(train_folder)
+                         if f.startswith("snapshot-") and f.endswith(".pt")]
+
+        # For any hardcoded keep file that is missing, fall back to the latest
+        # available snapshot of the same type rather than deleting everything.
+        def latest_of_type(prefix, exclude_prefix):
+            """Return the snapshot filename with the highest iteration number."""
+            candidates = [f for f in all_snapshots
+                          if f.startswith(prefix) and not f.startswith(exclude_prefix)]
+            if not candidates:
+                return None
+            def iteration(name):
+                try:
+                    return int(name.replace(prefix, "").replace(".pt", ""))
+                except ValueError:
+                    return -1
+            return max(candidates, key=iteration)
+
+        fallbacks = {}
+        final_keep = set(keep_files)
+        for f in keep_files:
+            if not os.path.exists(os.path.join(train_folder, f)):
+                if "detector" in f:
+                    fallback = latest_of_type("snapshot-detector-", "")
+                else:
+                    fallback = latest_of_type("snapshot-", "snapshot-detector-")
+                if fallback:
+                    final_keep.add(fallback)
+                    fallbacks[f] = fallback
+
+        for file in all_snapshots:
+            if file not in final_keep:
                 os.remove(os.path.join(train_folder, file))
-        st.success("🧹 Snapshots cleaned: Only selected files kept.")
+
+        if fallbacks:
+            for intended, used in fallbacks.items():
+                st.warning(
+                    f"⚠️ '{intended}' not found — kept '{used}' (latest available) instead. "
+                    "Training may not have reached the expected iteration."
+                )
+        else:
+            st.success("🧹 Snapshots cleaned: Only selected files kept.")
     else:
         st.warning("⚠️ Training folder not found.")
 

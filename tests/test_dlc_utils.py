@@ -867,5 +867,54 @@ class TestDLCUtils(unittest.TestCase):
             # Verify that the error message is displayed for saving H5 failure
             MockError.assert_any_call("❌ Could not complete prediction or labeling: Saving H5 failed")
 ########################################################################
+
+class TestCleanSnapshots(unittest.TestCase):
+
+    def _make_snapshots(self, folder, names):
+        for name in names:
+            open(os.path.join(folder, name), "w").close()
+
+    @patch("src.train_predict.dlc_utils.st")
+    def test_both_targets_present(self, mock_st):
+        with tempfile.TemporaryDirectory() as d:
+            self._make_snapshots(d, [
+                "snapshot-50.pt",
+                "snapshot-100.pt",
+                "snapshot-detector-100.pt",
+                "snapshot-detector-200.pt",
+            ])
+            dlc_utils.clean_snapshots(d)
+            kept = set(os.listdir(d))
+            self.assertIn("snapshot-100.pt", kept)
+            self.assertIn("snapshot-detector-200.pt", kept)
+            self.assertNotIn("snapshot-50.pt", kept)
+            self.assertNotIn("snapshot-detector-100.pt", kept)
+            mock_st.success.assert_called_once()
+            mock_st.warning.assert_not_called()
+
+    @patch("src.train_predict.dlc_utils.st")
+    def test_pose_target_missing_falls_back(self, mock_st):
+        # snapshot-100.pt is absent; snapshot-80.pt is the latest pose snapshot
+        with tempfile.TemporaryDirectory() as d:
+            self._make_snapshots(d, [
+                "snapshot-50.pt",
+                "snapshot-80.pt",
+                "snapshot-detector-200.pt",
+            ])
+            dlc_utils.clean_snapshots(d)
+            kept = set(os.listdir(d))
+            self.assertIn("snapshot-80.pt", kept)
+            self.assertIn("snapshot-detector-200.pt", kept)
+            self.assertNotIn("snapshot-50.pt", kept)
+            mock_st.warning.assert_called()
+            mock_st.success.assert_not_called()
+
+    @patch("src.train_predict.dlc_utils.st")
+    def test_folder_not_found(self, mock_st):
+        dlc_utils.clean_snapshots("/nonexistent/path/to/train_folder")
+        mock_st.warning.assert_called_once()
+        mock_st.success.assert_not_called()
+
+########################################################################
 if __name__ == '__main__':
     unittest.main()
