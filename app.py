@@ -3,6 +3,12 @@ from PIL import Image
 from pathlib import Path
 import os
 
+from src.train_predict.dlc_utils import get_device
+
+device = get_device()
+device_label = "CUDA (GPU)" if device == "cuda" else "CPU"
+st.sidebar.info(f"Running on: {device_label}")
+
 st.title("🧠 Receptive Field Mapping App")
 
 st.markdown("""

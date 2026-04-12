@@ -19,6 +19,15 @@ from glob import glob
 from src.post_processing.datadlc import DataDLC
 from src.post_processing.plotting_plotly import PlottingPlotly
 
+
+def get_device() -> str:
+    """Return 'cuda' if a CUDA GPU is available, else 'cpu'."""
+    import torch
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
+
+
 # Project Setup and Utilities
 
 def init_project(config_path: str, project_path: str) -> None:
