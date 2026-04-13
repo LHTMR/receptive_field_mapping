@@ -94,7 +94,7 @@ class MergedData:
         for i in range(len(df_neuron)):
             if df_neuron['Spike'][i] == 1:
                 if gap_start is not None and (i - gap_start) <= self.max_gap_fill:
-                    df_neuron['Spikes_Filled'][gap_start:i] = 1
+                    df_neuron.loc[gap_start:i-1, 'Spikes_Filled'] = 1
                 gap_start = i + 1
             elif df_neuron['Spike'][i] == 0 and gap_start is None:
                 gap_start = i
@@ -116,10 +116,9 @@ class MergedData:
 
         # Fill IFF column based on shift direction
         if best_shift < 0:
-            self.df_merged["IFF"].fillna(method='ffill', inplace=True)
-            self.df_merged["IFF"].fillna(0, inplace=True)
+            self.df_merged["IFF"] = self.df_merged["IFF"].ffill().fillna(0)
         else:
-            self.df_merged["IFF"].fillna(0, inplace=True)
+            self.df_merged["IFF"] = self.df_merged["IFF"].fillna(0)
 
         return self.df_merged
 
