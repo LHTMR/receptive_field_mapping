@@ -280,7 +280,7 @@ class TestDLCUtils(unittest.TestCase):
     def test_clean_snapshots_when_files_exist(self, mock_st, mock_remove):
         with tempfile.TemporaryDirectory() as tmp_dir:
             # Create snapshot files
-            snapshot_100 = os.path.join(tmp_dir, "snapshot-100.pt")
+            snapshot_100 = os.path.join(tmp_dir, "snapshot-075.pt")
             snapshot_200 = os.path.join(tmp_dir, "snapshot-detector-200.pt")
             snapshot_extra = os.path.join(tmp_dir, "snapshot-extra.pt")
 
@@ -300,7 +300,7 @@ class TestDLCUtils(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
 
             # Create only the files that should be kept
-            snapshot_100 = os.path.join(tmp_dir, "snapshot-100.pt")
+            snapshot_100 = os.path.join(tmp_dir, "snapshot-075.pt")
             snapshot_200 = os.path.join(tmp_dir, "snapshot-detector-200.pt")
             with open(snapshot_100, 'w'), open(snapshot_200, 'w'):
                 pass
@@ -716,7 +716,7 @@ class TestDLCUtils(unittest.TestCase):
                 detector_path=os.path.join(train_folder,
                                            "snapshot-detector-200.pt"),
                 snapshot_path=os.path.join(train_folder,
-                                           "snapshot-100.pt"),
+                                           "snapshot-075.pt"),
                 epochs=25,
                 save_epochs=25,
                 detector_epochs=50,
@@ -882,13 +882,13 @@ class TestCleanSnapshots(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self._make_snapshots(d, [
                 "snapshot-50.pt",
-                "snapshot-100.pt",
+                "snapshot-075.pt",
                 "snapshot-detector-100.pt",
                 "snapshot-detector-200.pt",
             ])
             dlc_utils.clean_snapshots(d)
             kept = set(os.listdir(d))
-            self.assertIn("snapshot-100.pt", kept)
+            self.assertIn("snapshot-075.pt", kept)
             self.assertIn("snapshot-detector-200.pt", kept)
             self.assertNotIn("snapshot-50.pt", kept)
             self.assertNotIn("snapshot-detector-100.pt", kept)
@@ -897,7 +897,7 @@ class TestCleanSnapshots(unittest.TestCase):
 
     @patch("src.train_predict.dlc_utils.st")
     def test_pose_target_missing_falls_back(self, mock_st):
-        # snapshot-100.pt is absent; snapshot-80.pt is the latest pose snapshot
+        # snapshot-075.pt is absent; snapshot-80.pt is the latest pose snapshot
         with tempfile.TemporaryDirectory() as d:
             self._make_snapshots(d, [
                 "snapshot-50.pt",

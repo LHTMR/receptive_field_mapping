@@ -237,7 +237,7 @@ def clean_snapshots(train_folder: str) -> None:
     Deletes unnecessary snapshot files from the training folder, keeping only selected ones.
 
     Attempts to retain the hardcoded targets:
-    - 'snapshot-100.pt' (pose model)
+    - 'snapshot-075.pt' (pose model)
     - 'snapshot-detector-200.pt' (detector model)
 
     If a target file is missing (e.g. training stopped early), falls back to the
@@ -254,9 +254,9 @@ def clean_snapshots(train_folder: str) -> None:
         Streamlit success message if all target files were present, warning message(s)
         if fallbacks were used, or a warning if the training folder was not found.
     """
-    # Snapshot filenames produced by the Jun 2025 training run (100 pose epochs,
+    # Snapshot filenames produced by the Jun 2025 training run (75 pose epochs,
     # 200 detector epochs). Update these if the model is retrained.
-    keep_files = {"snapshot-100.pt", "snapshot-detector-200.pt"}
+    keep_files = {"snapshot-075.pt", "snapshot-detector-200.pt"}
 
     if os.path.exists(train_folder):
         all_snapshots = [f for f in os.listdir(train_folder)
@@ -652,7 +652,7 @@ def run_retraining(config_path, train_folder,
         )
         snapshot_path = os.path.join(
         train_folder,
-        "snapshot-100.pt"   # Change this for new model!
+        "snapshot-075.pt"   # Change this for new model!
         )
         st.info("🧠 Starting model training...")
         deeplabcut.train_network(config_path,
