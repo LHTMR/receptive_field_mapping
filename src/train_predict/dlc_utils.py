@@ -254,7 +254,8 @@ def clean_snapshots(train_folder: str) -> None:
         Streamlit success message if all target files were present, warning message(s)
         if fallbacks were used, or a warning if the training folder was not found.
     """
-    # Change this for new model!!
+    # Snapshot filenames produced by the Jun 2025 training run (100 pose epochs,
+    # 200 detector epochs). Update these if the model is retrained.
     keep_files = {"snapshot-100.pt", "snapshot-detector-200.pt"}
 
     if os.path.exists(train_folder):
@@ -630,6 +631,8 @@ def run_retraining(config_path, train_folder,
     # Create training dataset
     try:       
         st.info("🛠️ Creating training dataset...")
+        # HRNet-w48 + FasterRCNN: DLC 3.x recommended top-down architecture.
+        # Model retrained Jun 2025. Update these if the model is retrained.
         deeplabcut.create_training_dataset(config_path,
                                     num_shuffles=1,
                                     weight_init=None,
@@ -642,6 +645,7 @@ def run_retraining(config_path, train_folder,
         st.stop()
 
     try:
+        # Snapshot filenames from the Jun 2025 training run. Update if retrained.
         detector_path = os.path.join(
         train_folder,
         "snapshot-detector-200.pt"   # Change this for new model!

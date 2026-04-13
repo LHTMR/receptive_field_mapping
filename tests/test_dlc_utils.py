@@ -699,11 +699,14 @@ class TestDLCUtils(unittest.TestCase):
             dlc_utils.run_retraining(config_path, train_folder)
 
             # Verify that create_training_dataset was called
+            # HRNet-w48 + FasterRCNN: DLC 3.x recommended top-down architecture,
+            # used in the Jun 2025 training run.
             MockCreateDataset.assert_called_once_with(
                 config_path,
                 num_shuffles=1,
                 weight_init=None,
-                net_type="top_down_resnet_50",
+                net_type="top_down_hrnet_w48",
+                detector_type="fasterrcnn_resnet50_fpn_v2",
                 userfeedback=False
             )
 
@@ -713,7 +716,7 @@ class TestDLCUtils(unittest.TestCase):
                 detector_path=os.path.join(train_folder,
                                            "snapshot-detector-200.pt"),
                 snapshot_path=os.path.join(train_folder,
-                                           "snapshot-075.pt"),
+                                           "snapshot-100.pt"),
                 epochs=25,
                 save_epochs=25,
                 detector_epochs=50,
